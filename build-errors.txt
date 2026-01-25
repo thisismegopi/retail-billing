@@ -1,0 +1,30 @@
+
+> temp-app@0.0.0 build
+> tsc -b && vite build
+
+src/layouts/MainLayout.tsx(1,67): error TS6133: 'PanelLeft' is declared but its value is never read.
+src/lib/billUtils.ts(1,1): error TS6133: 'Timestamp' is declared but its value is never read.
+src/pages/customers/CustomerListPage.tsx(44,9): error TS2322: Type 'Resolver<{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: unknown; email?: string | undefined; address?: string | undefined; }, any, { name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }>' is not assignable to type 'Resolver<{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }, any, { name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }>' is not assignable to type 'ResolverOptions<{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: unknown; email?: string | undefined; address?: string | undefined; }>'.
+      Type 'unknown' is not assignable to type 'number'.
+src/pages/customers/CustomerListPage.tsx(161,54): error TS2345: Argument of type '(data: CustomerFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }': name, phone, customerType, creditLimit
+src/pages/customers/CustomerListPage.tsx(264,54): error TS2345: Argument of type '(data: CustomerFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; phone: string; customerType: "retail" | "wholesale"; creditLimit: number; email?: string | undefined; address?: string | undefined; }': name, phone, customerType, creditLimit
+src/pages/products/ProductListPage.tsx(45,9): error TS2322: Type 'Resolver<{ name: string; sku: string; retailPrice: unknown; currentStock: unknown; unit: string; wholesalePrice?: unknown; costPrice?: unknown; }, any, { name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }>' is not assignable to type 'Resolver<{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }, any, { name: string; sku: string; ... 4 more ...; costPrice?: number | undefined; }>'.
+  Types of parameters 'options' and 'options' are incompatible.
+    Type 'ResolverOptions<{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }>' is not assignable to type 'ResolverOptions<{ name: string; sku: string; retailPrice: unknown; currentStock: unknown; unit: string; wholesalePrice?: unknown; costPrice?: unknown; }>'.
+      Type 'unknown' is not assignable to type 'number'.
+src/pages/products/ProductListPage.tsx(159,54): error TS2345: Argument of type '(data: ProductFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }': name, sku, retailPrice, currentStock, unit
+src/pages/products/ProductListPage.tsx(269,54): error TS2345: Argument of type '(data: ProductFormValues) => Promise<void>' is not assignable to parameter of type 'SubmitHandler<TFieldValues>'.
+  Types of parameters 'data' and 'data' are incompatible.
+    Type 'TFieldValues' is not assignable to type '{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }'.
+      Type 'FieldValues' is missing the following properties from type '{ name: string; sku: string; retailPrice: number; currentStock: number; unit: string; wholesalePrice?: number | undefined; costPrice?: number | undefined; }': name, sku, retailPrice, currentStock, unit
