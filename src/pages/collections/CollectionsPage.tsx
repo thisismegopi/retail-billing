@@ -122,19 +122,19 @@ export default function CollectionsPage() {
                     </CardHeader>
                     <CardContent>
                         {customers.length === 0 ? (
-                            <p className='text-gray-500 text-center py-8'>No customers with outstanding balance.</p>
+                            <p className='text-muted-foreground text-center py-8'>No customers with outstanding balance.</p>
                         ) : (
                             <div className='space-y-2'>
                                 {customers.map(customer => (
                                     <div
                                         key={customer.id}
-                                        className={`p-3 border rounded cursor-pointer hover:bg-gray-50 ${selectedCustomer?.id === customer.id ? 'bg-blue-50 border-blue-500' : ''}`}
+                                        className={`p-3 border rounded cursor-pointer hover:bg-muted/50 ${selectedCustomer?.id === customer.id ? 'bg-accent border-primary' : ''}`}
                                         onClick={() => handleCustomerSelect(customer)}
                                     >
                                         <div className='flex justify-between items-center'>
                                             <div>
                                                 <p className='font-medium'>{customer.name}</p>
-                                                <p className='text-sm text-gray-500'>{customer.phone}</p>
+                                                <p className='text-sm text-muted-foreground'>{customer.phone}</p>
                                             </div>
                                             <p className='font-semibold text-red-600'>{formatCurrency(customer.outstandingBalance)}</p>
                                         </div>
@@ -153,9 +153,9 @@ export default function CollectionsPage() {
                     </CardHeader>
                     <CardContent>
                         {!selectedCustomer ? (
-                            <p className='text-gray-500 text-center py-8'>Select a customer from the left.</p>
+                            <p className='text-muted-foreground text-center py-8'>Select a customer from the left.</p>
                         ) : unpaidBills.length === 0 ? (
-                            <p className='text-gray-500 text-center py-8'>No unpaid bills for this customer.</p>
+                            <p className='text-muted-foreground text-center py-8'>No unpaid bills for this customer.</p>
                         ) : (
                             <div className='space-y-2'>
                                 {unpaidBills.map(bill => (
@@ -163,7 +163,7 @@ export default function CollectionsPage() {
                                         <div className='flex justify-between items-start mb-2'>
                                             <div>
                                                 <p className='font-medium'>{bill.billNumber}</p>
-                                                <p className='text-sm text-gray-500'>{bill.billDate?.toDate().toLocaleDateString()}</p>
+                                                <p className='text-sm text-muted-foreground'>{bill.billDate?.toDate().toLocaleDateString()}</p>
                                             </div>
                                             <span className={`text-xs px-2 py-1 rounded ${bill.paymentStatus === 'unpaid' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
                                                 {bill.paymentStatus}

@@ -339,7 +339,7 @@ export default function DashboardPage() {
                                             <td className='py-3 px-4 text-center'>{getStatusBadge(bill)}</td>
                                             <td className='py-3 px-4 text-center'>
                                                 <button
-                                                    onClick={() => window.open(`/invoice/${bill.id}`, '_blank')}
+                                                    onClick={() => window.open(`/retail-billing/invoice/${bill.id}`, '_blank')}
                                                     className='text-blue-600 hover:text-blue-800 transition-colors'
                                                     title='View Invoice'
                                                 >

@@ -50,7 +50,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
                 shopId: userData.shopId,
                 billNumber,
                 billDate: Timestamp.now(),
-                customerId: customerId || undefined, // Include customerId if customer is selected
+                ...(customerId && { customerId }), // Only include customerId if it exists
                 customerName,
                 customerType,
                 items,

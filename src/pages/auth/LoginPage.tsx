@@ -1,14 +1,16 @@
-import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
-import { useNavigate } from 'react-router-dom';
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
 
 const schema = z.object({
     email: z.string().email('Invalid email address'),
@@ -30,7 +32,7 @@ export default function LoginPage() {
         setError('');
         try {
             await signInWithEmailAndPassword(auth, data.email, data.password);
-            navigate('/');
+            navigate('/retail-billing');
         } catch (e: any) {
             setError('Failed to sign in. Please check your credentials.');
             console.error(e);

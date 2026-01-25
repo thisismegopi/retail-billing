@@ -4,17 +4,17 @@ import AuthLayout from '@/layouts/AuthLayout';
 import { AuthProvider } from '@/contexts/AuthContext';
 import BillingPage from '@/pages/billing/BillingPage';
 import { CartProvider } from '@/contexts/CartContext';
+import CategoryListPage from './pages/categories/CategoryListPage';
 import CollectionsPage from '@/pages/collections/CollectionsPage';
 import CustomerListPage from './pages/customers/CustomerListPage';
-import CategoryListPage from './pages/categories/CategoryListPage';
 import DashboardPage from './pages/dashboard/DashboardPage';
+import InvoicePage from './pages/invoice/InvoicePage';
 import LoginPage from './pages/auth/LoginPage';
 import MainLayout from './layouts/MainLayout';
 import ProductListPage from './pages/products/ProductListPage';
 import ReportsDashboard from './pages/reports/ReportsDashboard';
 import SalesReportPage from './pages/reports/SalesReportPage';
 import ShopSettingsPage from './pages/settings/ShopSettingsPage';
-import InvoicePage from './pages/invoice/InvoicePage';
 import { Toaster } from '@/components/ui/toaster';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -32,13 +32,13 @@ function App() {
                 <BrowserRouter>
                     <Routes>
                         {/* Public Routes */}
-                        <Route path='/auth' element={<AuthLayout />}>
+                        <Route path='/retail-billing/auth' element={<AuthLayout />}>
                             <Route path='login' element={<LoginPage />} />
                         </Route>
 
                         {/* Protected Routes */}
                         <Route element={<ProtectedRoute />}>
-                            <Route path='/' element={<MainLayout />}>
+                            <Route path='/retail-billing' element={<MainLayout />}>
                                 <Route index element={<DashboardPage />} />
                                 <Route path='billing' element={<BillingPage />} />
                                 <Route path='products' element={<ProductListPage />} />
@@ -50,11 +50,11 @@ function App() {
                                 <Route path='settings' element={<ShopSettingsPage />} />
                             </Route>
                             {/* Invoice route - outside main layout for printing */}
-                            <Route path='invoice/:billId' element={<InvoicePage />} />
+                            <Route path='/retail-billing/invoice/:billId' element={<InvoicePage />} />
                         </Route>
 
                         {/* Fallback */}
-                        <Route path='*' element={<Navigate to='/' replace />} />
+                        <Route path='*' element={<Navigate to='/retail-billing/auth/login' replace />} />
                     </Routes>
                 </BrowserRouter>
                 <Toaster />
