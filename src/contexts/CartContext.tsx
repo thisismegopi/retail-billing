@@ -1,5 +1,5 @@
-import React, { createContext, useState, useCallback } from 'react';
 import type { BillItem, Product } from '@/lib/types';
+import React, { createContext, useCallback, useState } from 'react';
 
 interface CartContextType {
     items: BillItem[];
@@ -17,6 +17,7 @@ interface CartContextType {
     updatePrice: (productId: string, price: number) => void;
     setCustomer: (name: string, type: 'retail' | 'wholesale', customerId?: string | null) => void;
     setDiscount: (discount: number) => void;
+    setTaxRate: (rate: number) => void;
     clearCart: () => void;
 }
 
@@ -28,7 +29,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [customerId, setCustomerId] = useState<string | null>(null);
     const [customerType, setCustomerType] = useState<'retail' | 'wholesale'>('retail');
     const [discount, setDiscountValue] = useState(0);
-    const taxRate = 18; // 18% GST
+    const [taxRate, setTaxRateValue] = useState(0); // Default 0% (no tax)
 
     const addItem = useCallback(
         (product: Product, quantity = 1) => {
@@ -42,6 +43,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     productId: product.id!,
                     productName: product.name,
                     sku: product.sku,
+                    categoryId: product.categoryId,
+                    categoryName: product.categoryName,
                     quantity,
                     unit: product.unit,
                     costPrice: product.costPrice || 0,
@@ -85,12 +88,17 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setDiscountValue(value);
     }, []);
 
+    const setTaxRate = useCallback((rate: number) => {
+        setTaxRateValue(rate);
+    }, []);
+
     const clearCart = useCallback(() => {
         setItems([]);
         setCustomerName('Walk-in');
         setCustomerId(null);
         setCustomerType('retail');
         setDiscountValue(0);
+        setTaxRateValue(0);
     }, []);
 
     // Calculate totals
@@ -116,6 +124,7 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 updatePrice,
                 setCustomer,
                 setDiscount,
+                setTaxRate,
                 clearCart,
             }}
         >

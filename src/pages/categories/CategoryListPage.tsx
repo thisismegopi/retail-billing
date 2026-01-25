@@ -99,7 +99,22 @@ export default function CategoryListPage() {
 
     const handleEdit = (category: Category) => {
         setEditingCategory(category);
+        // Reset form with category values
+        reset({
+            name: category.name,
+            description: category.description || '',
+        });
         setShowEditDialog(true);
+    };
+
+    const handleCloseEditDialog = () => {
+        setShowEditDialog(false);
+        setEditingCategory(null);
+        // Reset form to default values
+        reset({
+            name: '',
+            description: '',
+        });
     };
 
     const handleUpdate = async (data: CategoryFormValues) => {
@@ -129,6 +144,11 @@ export default function CategoryListPage() {
             });
             setShowEditDialog(false);
             setEditingCategory(null);
+            // Reset form to default values
+            reset({
+                name: '',
+                description: '',
+            });
             fetchCategories();
             toast.success('Category updated successfully!');
         } catch (error) {
@@ -216,7 +236,7 @@ export default function CategoryListPage() {
                 <CardContent>
                     {/* Search Bar */}
                     <div className='mb-4'>
-                        <Input placeholder='Search categories by name...' value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='max-w-sm' />
+                        <Input placeholder='Search categories by name...' value={searchTerm} onChange={e => setSearchTerm(e.target.value.trimStart())} className='max-w-sm' />
                     </div>
 
                     {filteredCategories.length === 0 ? (
@@ -264,7 +284,12 @@ export default function CategoryListPage() {
             </Card>
 
             {/* Edit Category Dialog */}
-            <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+            <Dialog
+                open={showEditDialog}
+                onOpenChange={open => {
+                    if (!open) handleCloseEditDialog();
+                }}
+            >
                 <DialogContent>
                     <DialogHeader>
                         <DialogTitle>Edit Category</DialogTitle>
@@ -274,22 +299,15 @@ export default function CategoryListPage() {
                         <form onSubmit={handleSubmit(handleUpdate)} className='space-y-4'>
                             <div className='space-y-2'>
                                 <Label htmlFor='edit-name'>Category Name *</Label>
-                                <Input id='edit-name' {...register('name')} defaultValue={editingCategory.name} placeholder='Category name' />
+                                <Input id='edit-name' {...register('name')} placeholder='Category name' />
                                 {errors.name && <p className='text-sm text-red-600'>{errors.name.message}</p>}
                             </div>
                             <div className='space-y-2'>
                                 <Label htmlFor='edit-description'>Description</Label>
-                                <Textarea id='edit-description' {...register('description')} defaultValue={editingCategory.description || ''} placeholder='Optional description' rows={3} />
+                                <Textarea id='edit-description' {...register('description')} placeholder='Optional description' rows={3} />
                             </div>
                             <div className='flex gap-2 justify-end'>
-                                <Button
-                                    type='button'
-                                    variant='outline'
-                                    onClick={() => {
-                                        setShowEditDialog(false);
-                                        setEditingCategory(null);
-                                    }}
-                                >
+                                <Button type='button' variant='outline' onClick={handleCloseEditDialog}>
                                     Cancel
                                 </Button>
                                 <Button type='submit' disabled={isLoading}>

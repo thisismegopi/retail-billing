@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import type { Customer, Product } from '@/lib/types';
 import { Minus, Plus, Trash2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
@@ -15,13 +16,17 @@ import { useCart } from '@/hooks/useCart';
 
 export default function BillingPage() {
     const { userData } = useAuth();
-    const { items, addItem, removeItem, updateQuantity, subtotal, taxAmount, totalAmount, taxRate, discount, setCustomer } = useCart();
+    const { items, addItem, removeItem, updateQuantity, updatePrice, subtotal, taxAmount, totalAmount, taxRate, discount, setCustomer, setDiscount, setTaxRate } = useCart();
     const [searchTerm, setSearchTerm] = useState('');
     const [searchResults, setSearchResults] = useState<Product[]>([]);
     const [isSearching, setIsSearching] = useState(false);
     const [showCheckout, setShowCheckout] = useState(false);
     const [customers, setCustomers] = useState<Customer[]>([]);
     const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
+    const [discountType, setDiscountType] = useState<'none' | 'flat' | 'percentage'>('none');
+    const [discountValue, setDiscountValue] = useState<string>('0');
+    const [taxEnabled, setTaxEnabled] = useState(false);
+    const [taxPercentage, setTaxPercentage] = useState<string>('18');
 
     useEffect(() => {
         fetchCustomers();
@@ -71,7 +76,7 @@ export default function BillingPage() {
     };
 
     const handleSearchChange = (value: string) => {
-        setSearchTerm(value);
+        setSearchTerm(value.trimStart());
         if (value.trim()) {
             searchProducts(value);
         } else {
@@ -83,6 +88,49 @@ export default function BillingPage() {
         addItem(product, 1);
         setSearchTerm('');
         setSearchResults([]);
+    };
+
+    const handleDiscountChange = (value: string) => {
+        setDiscountValue(value);
+        const numValue = parseFloat(value) || 0;
+
+        if (discountType === 'flat') {
+            // Flat discount cannot exceed subtotal
+            const maxDiscount = subtotal;
+            const actualDiscount = Math.min(numValue, maxDiscount);
+            setDiscount(actualDiscount);
+        } else if (discountType === 'percentage') {
+            // Percentage must be between 0-100
+            const percentage = Math.max(0, Math.min(100, numValue));
+            const discountAmount = (subtotal * percentage) / 100;
+            setDiscount(discountAmount);
+        } else {
+            setDiscount(0);
+        }
+    };
+
+    const handleDiscountTypeChange = (type: 'none' | 'flat' | 'percentage') => {
+        setDiscountType(type);
+        setDiscountValue('0');
+        setDiscount(0);
+    };
+
+    const handleTaxChange = (enabled: boolean) => {
+        setTaxEnabled(enabled);
+        if (enabled) {
+            const percentage = parseFloat(taxPercentage) || 0;
+            const clampedPercentage = Math.max(0, Math.min(100, percentage));
+            setTaxRate(clampedPercentage);
+        } else {
+            setTaxRate(0);
+        }
+    };
+
+    const handleTaxPercentageChange = (value: string) => {
+        setTaxPercentage(value);
+        const percentage = parseFloat(value) || 0;
+        const clampedPercentage = Math.max(0, Math.min(100, percentage));
+        setTaxRate(clampedPercentage);
     };
 
     return (
@@ -185,7 +233,19 @@ export default function BillingPage() {
                                                         </Button>
                                                     </div>
                                                 </td>
-                                                <td className='p-2 text-right'>{formatCurrency(item.sellingPrice)}</td>
+                                                <td className='p-2 text-right'>
+                                                    <Input
+                                                        type='number'
+                                                        step='0.01'
+                                                        min='0'
+                                                        value={item.sellingPrice}
+                                                        onChange={e => {
+                                                            const newPrice = parseFloat(e.target.value) || 0;
+                                                            updatePrice(item.productId, newPrice);
+                                                        }}
+                                                        className='w-24 text-right'
+                                                    />
+                                                </td>
                                                 <td className='p-2 text-right font-semibold'>{formatCurrency(item.totalAmount)}</td>
                                                 <td className='p-2 text-center'>
                                                     <Button size='sm' variant='destructive' onClick={() => removeItem(item.productId)}>
@@ -213,14 +273,101 @@ export default function BillingPage() {
                             <span>Subtotal:</span>
                             <span className='font-semibold'>{formatCurrency(subtotal)}</span>
                         </div>
-                        <div className='flex justify-between'>
-                            <span>Discount:</span>
-                            <span className='font-semibold text-red-600'>-{formatCurrency(discount)}</span>
+
+                        {/* Discount Section */}
+                        <div className='space-y-2 border-t pt-3'>
+                            <Label>Discount</Label>
+                            <RadioGroup className='mt-2' value={discountType} onValueChange={value => handleDiscountTypeChange(value as 'none' | 'flat' | 'percentage')}>
+                                <div className='flex gap-4'>
+                                    <div className='flex items-center space-x-2'>
+                                        <RadioGroupItem value='none' id='discount-none' />
+                                        <Label htmlFor='discount-none' className='font-normal cursor-pointer'>
+                                            No Discount
+                                        </Label>
+                                    </div>
+                                    <div className='flex items-center space-x-2'>
+                                        <RadioGroupItem value='flat' id='discount-flat' />
+                                        <Label htmlFor='discount-flat' className='font-normal cursor-pointer'>
+                                            Flat
+                                        </Label>
+                                    </div>
+                                    <div className='flex items-center space-x-2'>
+                                        <RadioGroupItem value='percentage' id='discount-percentage' />
+                                        <Label htmlFor='discount-percentage' className='font-normal cursor-pointer'>
+                                            Percentage
+                                        </Label>
+                                    </div>
+                                </div>
+                            </RadioGroup>
+
+                            {discountType !== 'none' && (
+                                <div className='flex gap-2 items-center'>
+                                    <Input
+                                        type='number'
+                                        step={discountType === 'flat' ? '0.01' : '1'}
+                                        min='0'
+                                        max={discountType === 'percentage' ? '100' : undefined}
+                                        value={discountValue}
+                                        onChange={e => handleDiscountChange(e.target.value)}
+                                        placeholder={discountType === 'flat' ? 'Enter amount' : 'Enter %'}
+                                        className='flex-1'
+                                    />
+                                    {discountType === 'percentage' && <span className='text-sm text-gray-500'>%</span>}
+                                </div>
+                            )}
+
+                            {discount > 0 && (
+                                <div className='flex justify-between text-sm'>
+                                    <span className='text-gray-600'>Discount Applied:</span>
+                                    <span className='font-semibold text-red-600'>-{formatCurrency(discount)}</span>
+                                </div>
+                            )}
                         </div>
-                        <div className='flex justify-between'>
-                            <span>Tax ({taxRate}%):</span>
-                            <span className='font-semibold'>{formatCurrency(taxAmount)}</span>
+
+                        {/* Tax Section */}
+                        <div className='space-y-2 border-t pt-3'>
+                            <Label>Tax</Label>
+                            <RadioGroup className='mt-2' value={taxEnabled ? 'tax' : 'no-tax'} onValueChange={value => handleTaxChange(value === 'tax')}>
+                                <div className='flex gap-4'>
+                                    <div className='flex items-center space-x-2'>
+                                        <RadioGroupItem value='no-tax' id='tax-none' />
+                                        <Label htmlFor='tax-none' className='font-normal cursor-pointer'>
+                                            No Tax
+                                        </Label>
+                                    </div>
+                                    <div className='flex items-center space-x-2'>
+                                        <RadioGroupItem value='tax' id='tax-enabled' />
+                                        <Label htmlFor='tax-enabled' className='font-normal cursor-pointer'>
+                                            Tax
+                                        </Label>
+                                    </div>
+                                </div>
+                            </RadioGroup>
+
+                            {taxEnabled && (
+                                <div className='flex gap-2 items-center'>
+                                    <Input
+                                        type='number'
+                                        step='1'
+                                        min='0'
+                                        max='100'
+                                        value={taxPercentage}
+                                        onChange={e => handleTaxPercentageChange(e.target.value)}
+                                        placeholder='Enter tax %'
+                                        className='flex-1'
+                                    />
+                                    <span className='text-sm text-gray-500'>%</span>
+                                </div>
+                            )}
+
+                            {taxRate > 0 && (
+                                <div className='flex justify-between text-sm'>
+                                    <span className='text-gray-600'>Tax ({taxRate}%):</span>
+                                    <span className='font-semibold text-green-600'>{formatCurrency(taxAmount)}</span>
+                                </div>
+                            )}
                         </div>
+
                         <div className='border-t pt-3 flex justify-between text-lg'>
                             <span className='font-bold'>Total:</span>
                             <span className='font-bold text-green-600'>{formatCurrency(totalAmount)}</span>

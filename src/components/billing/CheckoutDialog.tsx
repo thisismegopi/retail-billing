@@ -50,6 +50,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
                 shopId: userData.shopId,
                 billNumber,
                 billDate: Timestamp.now(),
+                customerId: customerId || undefined, // Include customerId if customer is selected
                 customerName,
                 customerType,
                 items,
@@ -92,11 +93,6 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
                     await updateDoc(customerRef, {
                         outstandingBalance: currentOutstanding + totalAmount,
                     });
-
-                    // Update bill with customerId
-                    await updateDoc(doc(db, 'bills', billRef.id), {
-                        customerId: customerId,
-                    });
                 }
             }
 
@@ -127,7 +123,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
                         <Label>Payment Method</Label>
                         <div className='grid grid-cols-2 gap-2'>
                             {(['cash', 'card', 'upi', 'credit'] as const).map(method => (
-                                <Button key={method} variant={paymentMethod === method ? 'default' : 'outline'} onClick={() => setPaymentMethod(method)} className='capitalize'>
+                                <Button key={method} variant={paymentMethod === method ? 'default' : 'outline'} onClick={() => setPaymentMethod(method)} className='uppercase'>
                                     {method}
                                 </Button>
                             ))}

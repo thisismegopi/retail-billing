@@ -52,6 +52,8 @@ export interface BillItem {
     productId: string;
     productName: string;
     sku: string;
+    categoryId?: string;
+    categoryName?: string;
     quantity: number;
     unit: string;
     costPrice: number;

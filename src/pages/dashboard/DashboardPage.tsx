@@ -1,9 +1,11 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, Clock, DollarSign, ExternalLink, FileText, Package, Users, XCircle } from 'lucide-react';
-import { Timestamp, collection, getDocs, limit, orderBy, query, where } from 'firebase/firestore';
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, ExternalLink, FileText, Package, Search, Users, XCircle } from 'lucide-react';
+import { DocumentSnapshot, Timestamp, collection, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import type { Bill } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { db } from '@/lib/firebase';
 import { formatCurrency } from '@/lib/utils';
 import { useAuth } from '@/hooks/useAuth';
@@ -15,6 +17,8 @@ interface DashboardStats {
     totalProducts: number;
 }
 
+const BILLS_PER_PAGE = 20;
+
 export default function DashboardPage() {
     const { userData } = useAuth();
     const [stats, setStats] = useState<DashboardStats>({
@@ -23,8 +27,13 @@ export default function DashboardPage() {
         totalCustomers: 0,
         totalProducts: 0,
     });
-    const [recentBills, setRecentBills] = useState<Bill[]>([]);
+    const [bills, setBills] = useState<Bill[]>([]);
+    const [filteredBills, setFilteredBills] = useState<Bill[]>([]);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
+    const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
+    const [hasMore, setHasMore] = useState(true);
 
     useEffect(() => {
         if (userData?.shopId) {
@@ -32,6 +41,18 @@ export default function DashboardPage() {
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [userData?.shopId]);
+
+    useEffect(() => {
+        // Filter bills based on search term
+        if (searchTerm.trim() === '') {
+            setFilteredBills(bills);
+        } else {
+            const term = searchTerm.toLowerCase();
+            const filtered = bills.filter(bill => bill.billNumber.toLowerCase().includes(term) || bill.customerName.toLowerCase().includes(term));
+            setFilteredBills(filtered);
+        }
+        setCurrentPage(1); // Reset to first page when search changes
+    }, [searchTerm, bills]);
 
     const fetchDashboardData = async () => {
         if (!userData?.shopId) {
@@ -79,18 +100,8 @@ export default function DashboardPage() {
 
             console.log('Total products:', totalProducts);
 
-            // Fetch recent 15 bills
-            const recentBillsQuery = query(collection(db, 'bills'), where('shopId', '==', userData.shopId), orderBy('createdAt', 'desc'), limit(15));
-            const recentBillsSnapshot = await getDocs(recentBillsQuery);
-            const recentBillsData = recentBillsSnapshot.docs.map(
-                doc =>
-                    ({
-                        id: doc.id,
-                        ...doc.data(),
-                    }) as Bill,
-            );
-
-            console.log('Recent bills fetched:', recentBillsData.length, recentBillsData);
+            // Fetch all bills with pagination (initial load - first 20)
+            await fetchBills(true);
 
             setStats({
                 todayBillsAmount,
@@ -98,7 +109,6 @@ export default function DashboardPage() {
                 totalCustomers,
                 totalProducts,
             });
-            setRecentBills(recentBillsData);
 
             console.log('Dashboard data set successfully');
         } catch (error) {
@@ -110,6 +120,61 @@ export default function DashboardPage() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const fetchBills = async (isInitial = false) => {
+        if (!userData?.shopId) return;
+
+        try {
+            let billsQuery;
+
+            if (isInitial) {
+                // Initial load - get first 20 bills
+                billsQuery = query(
+                    collection(db, 'bills'),
+                    where('shopId', '==', userData.shopId),
+                    orderBy('createdAt', 'desc'),
+                    limit(BILLS_PER_PAGE + 1), // Fetch one extra to check if there are more
+                );
+            } else if (lastDoc) {
+                // Load next page
+                billsQuery = query(collection(db, 'bills'), where('shopId', '==', userData.shopId), orderBy('createdAt', 'desc'), startAfter(lastDoc), limit(BILLS_PER_PAGE + 1));
+            } else {
+                return;
+            }
+
+            const billsSnapshot = await getDocs(billsQuery);
+            const fetchedBills = billsSnapshot.docs.slice(0, BILLS_PER_PAGE).map(
+                doc =>
+                    ({
+                        id: doc.id,
+                        ...doc.data(),
+                    }) as Bill,
+            );
+
+            // Check if there are more bills
+            setHasMore(billsSnapshot.docs.length > BILLS_PER_PAGE);
+
+            // Set last document for pagination
+            if (billsSnapshot.docs.length > 0) {
+                setLastDoc(billsSnapshot.docs[Math.min(BILLS_PER_PAGE - 1, billsSnapshot.docs.length - 1)]);
+            }
+
+            if (isInitial) {
+                setBills(fetchedBills);
+            } else {
+                setBills(prev => [...prev, ...fetchedBills]);
+            }
+
+            console.log('Bills fetched:', fetchedBills.length);
+        } catch (error) {
+            console.error('Error fetching bills:', error);
+        }
+    };
+
+    const handleLoadMore = async () => {
+        if (!hasMore) return;
+        await fetchBills(false);
     };
 
     const getStatusBadge = (bill: Bill) => {
@@ -145,6 +210,25 @@ export default function DashboardPage() {
             hour: '2-digit',
             minute: '2-digit',
         });
+    };
+
+    // Pagination for filtered results
+    const totalPages = Math.ceil(filteredBills.length / BILLS_PER_PAGE);
+    const startIndex = (currentPage - 1) * BILLS_PER_PAGE;
+    const endIndex = startIndex + BILLS_PER_PAGE;
+    const currentBills = filteredBills.slice(startIndex, endIndex);
+
+    const handlePreviousPage = () => {
+        setCurrentPage(prev => Math.max(1, prev - 1));
+    };
+
+    const handleNextPage = () => {
+        if (currentPage < totalPages) {
+            setCurrentPage(prev => prev + 1);
+        } else if (hasMore && searchTerm === '') {
+            // Load more bills from Firebase if at the end and no search active
+            handleLoadMore();
+        }
     };
 
     if (loading) {
@@ -209,11 +293,19 @@ export default function DashboardPage() {
                 </Card>
             </div>
 
-            {/* Recent Bills */}
+            {/* All Bills with Pagination */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Recent Bills</CardTitle>
-                    <CardDescription>Last 15 bills created</CardDescription>
+                    <div className='flex justify-between items-start'>
+                        <div>
+                            <CardTitle>All Bills</CardTitle>
+                            <CardDescription>{searchTerm ? `Showing ${filteredBills.length} results` : `Showing ${bills.length} bills`}</CardDescription>
+                        </div>
+                        <div className='relative w-64'>
+                            <Search className='absolute left-2 top-2.5 h-4 w-4 text-muted-foreground' />
+                            <Input placeholder='Search by bill number or customer...' value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='pl-8' />
+                        </div>
+                    </div>
                 </CardHeader>
                 <CardContent>
                     <div className='overflow-x-auto'>
@@ -230,14 +322,14 @@ export default function DashboardPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {recentBills.length === 0 ? (
+                                {currentBills.length === 0 ? (
                                     <tr>
                                         <td colSpan={7} className='text-center py-8 text-muted-foreground'>
-                                            No bills found
+                                            {searchTerm ? 'No bills found matching your search' : 'No bills found'}
                                         </td>
                                     </tr>
                                 ) : (
-                                    recentBills.map(bill => (
+                                    currentBills.map(bill => (
                                         <tr key={bill.id} className='border-b hover:bg-muted/50'>
                                             <td className='py-3 px-4 font-mono text-sm'>{bill.billNumber}</td>
                                             <td className='py-3 px-4'>{bill.customerName}</td>
@@ -260,6 +352,28 @@ export default function DashboardPage() {
                             </tbody>
                         </table>
                     </div>
+
+                    {/* Pagination Controls */}
+                    {filteredBills.length > 0 && (
+                        <div className='flex items-center justify-between mt-4 pt-4 border-t'>
+                            <div className='text-sm text-muted-foreground'>
+                                Showing {startIndex + 1} to {Math.min(endIndex, filteredBills.length)} of {filteredBills.length} bills
+                            </div>
+                            <div className='flex gap-2'>
+                                <Button variant='outline' size='sm' onClick={handlePreviousPage} disabled={currentPage === 1}>
+                                    <ChevronLeft className='h-4 w-4 mr-1' />
+                                    Previous
+                                </Button>
+                                <div className='flex items-center px-3 text-sm'>
+                                    Page {currentPage} {searchTerm === '' && hasMore ? '+' : `of ${totalPages}`}
+                                </div>
+                                <Button variant='outline' size='sm' onClick={handleNextPage} disabled={currentPage >= totalPages && (!hasMore || searchTerm !== '')}>
+                                    Next
+                                    <ChevronRight className='h-4 w-4 ml-1' />
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
         </div>

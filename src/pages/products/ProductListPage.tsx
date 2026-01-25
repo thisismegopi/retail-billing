@@ -125,7 +125,29 @@ export default function ProductListPage() {
 
     const handleEdit = (product: Product) => {
         setEditingProduct(product);
+        // Reset form with product values
+        reset({
+            name: product.name,
+            sku: product.sku,
+            categoryId: product.categoryId || '',
+            retailPrice: product.retailPrice,
+            wholesalePrice: product.wholesalePrice || 0,
+            costPrice: product.costPrice || 0,
+            currentStock: product.currentStock,
+            unit: product.unit,
+        });
         setShowEditDialog(true);
+    };
+
+    const handleCloseEditDialog = () => {
+        setShowEditDialog(false);
+        setEditingProduct(null);
+        // Reset form to default values
+        reset({
+            sku: generateSKU(),
+            unit: 'pcs',
+            currentStock: 0,
+        });
     };
 
     const handleUpdate = async (data: ProductFormValues) => {
@@ -162,6 +184,12 @@ export default function ProductListPage() {
             });
             setShowEditDialog(false);
             setEditingProduct(null);
+            // Reset form to default values
+            reset({
+                sku: generateSKU(),
+                unit: 'pcs',
+                currentStock: 0,
+            });
             fetchProducts();
             toast.success('Product updated successfully!');
         } catch (error) {
@@ -289,7 +317,7 @@ export default function ProductListPage() {
                 <CardContent>
                     {/* Search Bar */}
                     <div className='mb-4'>
-                        <Input placeholder='Search products by name, SKU, or category...' value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className='max-w-sm' />
+                        <Input placeholder='Search products by name, SKU, or category...' value={searchTerm} onChange={e => setSearchTerm(e.target.value.trimStart())} className='max-w-sm' />
                     </div>
 
                     {filteredProducts.length === 0 ? (
@@ -335,7 +363,12 @@ export default function ProductListPage() {
 
             {/* Edit Product Dialog */}
             {editingProduct && (
-                <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+                <Dialog
+                    open={showEditDialog}
+                    onOpenChange={open => {
+                        if (!open) handleCloseEditDialog();
+                    }}
+                >
                     <DialogContent className='max-w-2xl'>
                         <DialogHeader>
                             <DialogTitle>Edit Product</DialogTitle>
@@ -345,13 +378,13 @@ export default function ProductListPage() {
                             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-name'>Product Name</Label>
-                                    <Input id='edit-name' {...register('name')} defaultValue={editingProduct.name} />
+                                    <Input id='edit-name' {...register('name')} />
                                     {errors.name && <p className='text-red-500 text-xs'>{errors.name.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-sku'>SKU</Label>
-                                    <Input id='edit-sku' {...register('sku')} defaultValue={editingProduct.sku} />
+                                    <Input id='edit-sku' {...register('sku')} />
                                     {errors.sku && <p className='text-red-500 text-xs'>{errors.sku.message}</p>}
                                 </div>
 
@@ -360,7 +393,6 @@ export default function ProductListPage() {
                                     <select
                                         id='edit-categoryId'
                                         {...register('categoryId')}
-                                        defaultValue={editingProduct.categoryId || ''}
                                         className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
                                     >
                                         <option value=''>Select Category</option>
@@ -375,37 +407,37 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-retailPrice'>Retail Price</Label>
-                                    <Input id='edit-retailPrice' type='number' step='0.01' {...register('retailPrice')} defaultValue={editingProduct.retailPrice} />
+                                    <Input id='edit-retailPrice' type='number' step='0.01' {...register('retailPrice')} />
                                     {errors.retailPrice && <p className='text-red-500 text-xs'>{errors.retailPrice.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-wholesalePrice'>Wholesale Price (Optional)</Label>
-                                    <Input id='edit-wholesalePrice' type='number' step='0.01' {...register('wholesalePrice')} defaultValue={editingProduct.wholesalePrice || 0} />
+                                    <Input id='edit-wholesalePrice' type='number' step='0.01' {...register('wholesalePrice')} />
                                     {errors.wholesalePrice && <p className='text-red-500 text-xs'>{errors.wholesalePrice.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-costPrice'>Cost Price (Optional)</Label>
-                                    <Input id='edit-costPrice' type='number' step='0.01' {...register('costPrice')} defaultValue={editingProduct.costPrice || 0} />
+                                    <Input id='edit-costPrice' type='number' step='0.01' {...register('costPrice')} />
                                     {errors.costPrice && <p className='text-red-500 text-xs'>{errors.costPrice.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-currentStock'>Current Stock</Label>
-                                    <Input id='edit-currentStock' type='number' {...register('currentStock')} defaultValue={editingProduct.currentStock} />
+                                    <Input id='edit-currentStock' type='number' {...register('currentStock')} />
                                     {errors.currentStock && <p className='text-red-500 text-xs'>{errors.currentStock.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-unit'>Unit</Label>
-                                    <Input id='edit-unit' {...register('unit')} defaultValue={editingProduct.unit} />
+                                    <Input id='edit-unit' {...register('unit')} />
                                     {errors.unit && <p className='text-red-500 text-xs'>{errors.unit.message}</p>}
                                 </div>
                             </div>
 
                             <div className='flex justify-end gap-2 pt-4'>
-                                <Button type='button' variant='outline' onClick={() => setShowEditDialog(false)}>
+                                <Button type='button' variant='outline' onClick={handleCloseEditDialog}>
                                     Cancel
                                 </Button>
                                 <Button type='submit' disabled={isLoading}>
