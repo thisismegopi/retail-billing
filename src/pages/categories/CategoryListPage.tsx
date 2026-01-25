@@ -254,7 +254,7 @@ export default function CategoryListPage() {
                                 </thead>
                                 <tbody>
                                     {filteredCategories.map(category => (
-                                        <tr key={category.id} className='border-b hover:bg-gray-50'>
+                                        <tr key={category.id} className='border-b hover:bg-muted/50'>
                                             <td className='p-2 font-medium'>{category.name}</td>
                                             <td className='p-2 text-sm text-gray-600'>{category.description || '-'}</td>
                                             <td className='p-2'>

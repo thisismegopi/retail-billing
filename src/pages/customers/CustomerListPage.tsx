@@ -233,7 +233,7 @@ export default function CustomerListPage() {
                                 </thead>
                                 <tbody>
                                     {customers.map(customer => (
-                                        <tr key={customer.id} className='border-b hover:bg-gray-50'>
+                                        <tr key={customer.id} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{customer.name}</td>
                                             <td className='p-2'>{customer.phone}</td>
                                             <td className='p-2 capitalize'>{customer.customerType}</td>

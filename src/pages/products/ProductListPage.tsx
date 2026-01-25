@@ -339,7 +339,7 @@ export default function ProductListPage() {
                                 </thead>
                                 <tbody>
                                     {filteredProducts.map(product => (
-                                        <tr key={product.id} className='border-b hover:bg-gray-50'>
+                                        <tr key={product.id} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{product.name}</td>
                                             <td className='p-2'>{product.sku}</td>
                                             <td className='p-2 text-sm text-gray-600'>{product.categoryName || '-'}</td>

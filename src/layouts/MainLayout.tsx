@@ -6,6 +6,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -49,11 +50,11 @@ export default function MainLayout() {
 
     return (
         <SidebarProvider defaultOpen={true}>
-            <Sidebar collapsible='offcanvas'>
-                <SidebarHeader className='border-b px-6 py-4 bg-white'>
-                    <h2 className='text-lg font-semibold'>{shopName}</h2>
+            <Sidebar collapsible='icon'>
+                <SidebarHeader className='border-b px-6 py-4'>
+                    <h2 className='text-lg font-semibold group-data-[state=collapsed]:hidden'>{shopName}</h2>
                 </SidebarHeader>
-                <SidebarContent className='bg-white'>
+                <SidebarContent>
                     <SidebarGroup>
                         <SidebarMenu>
                             {navItems.map(item => {
@@ -73,9 +74,9 @@ export default function MainLayout() {
                         </SidebarMenu>
                     </SidebarGroup>
                 </SidebarContent>
-                <SidebarFooter className='border-t p-4 bg-white'>
+                <SidebarFooter className='border-t p-2'>
                     <div className='flex items-center justify-between gap-2'>
-                        <span className='text-sm text-muted-foreground truncate flex-1'>{user?.email}</span>
+                        <span className='text-sm text-muted-foreground truncate flex-1 group-data-[state=collapsed]:hidden'>{user?.email}</span>
                         <Button variant='ghost' size='icon' onClick={handleLogout} title='Logout' className='shrink-0'>
                             <LogOut className='h-4 w-4' />
                         </Button>
@@ -83,11 +84,12 @@ export default function MainLayout() {
                 </SidebarFooter>
             </Sidebar>
 
-            <main className='flex flex-1 flex-col w-full'>
+            <main className='flex flex-1 flex-col w-full h-screen overflow-hidden'>
                 {/* Header */}
-                <header className='sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6'>
+                <header className='sticky top-0 z-10 flex h-14 items-center gap-4 border-b bg-background px-4 sm:px-6 flex-shrink-0'>
                     <SidebarTrigger className='-ml-1' />
                     <div className='flex-1' />
+                    <ThemeToggle />
                     <span className='text-sm text-muted-foreground hidden sm:inline'>{user?.email}</span>
                     <Button variant='outline' size='sm' onClick={handleLogout} className='hidden sm:flex'>
                         <LogOut className='mr-2 h-4 w-4' />

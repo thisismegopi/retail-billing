@@ -160,7 +160,13 @@ const Sidebar = React.forwardRef<
             data-variant={variant}
             data-side={side}
         >
-            <div className={cn('h-full w-[--sidebar-width] bg-sidebar border-r flex flex-col', className)} {...props}>
+            <div
+                className={cn(
+                    'h-full w-[--sidebar-width] bg-sidebar border-r flex flex-col transition-[width] duration-200 ease-linear group-data-[state=collapsed]:w-[--sidebar-width-icon]',
+                    className,
+                )}
+                {...props}
+            >
                 {children}
             </div>
         </div>

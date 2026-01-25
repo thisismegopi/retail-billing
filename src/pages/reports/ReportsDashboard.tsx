@@ -300,7 +300,7 @@ export default function ReportsDashboard() {
                                 </thead>
                                 <tbody>
                                     {customerReports.map((report, index) => (
-                                        <tr key={index} className='border-b hover:bg-gray-50'>
+                                        <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.customerName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(report.totalBillAmount)}</td>
                                             <td className='p-2 text-right text-red-600 font-semibold'>{formatCurrency(report.outstandingAmount)}</td>
@@ -335,7 +335,7 @@ export default function ReportsDashboard() {
                                 </thead>
                                 <tbody>
                                     {categoryReports.map((report, index) => (
-                                        <tr key={index} className='border-b hover:bg-gray-50'>
+                                        <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.categoryName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(report.totalSales)}</td>
                                             <td className='p-2 text-right'>{report.quantitySold}</td>
@@ -371,7 +371,7 @@ export default function ReportsDashboard() {
                                 </thead>
                                 <tbody>
                                     {productReports.map((report, index) => (
-                                        <tr key={index} className='border-b hover:bg-gray-50'>
+                                        <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.productName}</td>
                                             <td className='p-2 text-sm text-gray-600'>{report.sku}</td>
                                             <td className='p-2 text-sm'>{report.categoryName}</td>

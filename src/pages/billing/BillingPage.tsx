@@ -170,16 +170,16 @@ export default function BillingPage() {
 
                                 {/* Search Results Dropdown */}
                                 {searchResults.length > 0 && (
-                                    <div className='absolute top-full left-0 right-0 mt-1 border rounded-md bg-white shadow-lg max-h-60 overflow-y-auto z-10'>
+                                    <div className='absolute top-full left-0 right-0 mt-1 border rounded-md bg-popover shadow-lg max-h-60 overflow-y-auto z-10'>
                                         {searchResults.map(product => (
                                             <div
                                                 key={product.id}
-                                                className='p-3 hover:bg-gray-50 cursor-pointer border-b last:border-b-0 flex justify-between items-center'
+                                                className='p-3 hover:bg-muted/50 cursor-pointer border-b last:border-b-0 flex justify-between items-center'
                                                 onClick={() => handleAddProduct(product)}
                                             >
                                                 <div>
                                                     <p className='font-medium'>{product.name}</p>
-                                                    <p className='text-sm text-gray-500'>
+                                                    <p className='text-sm text-muted-foreground'>
                                                         {product.sku} • Stock: {product.currentStock} {product.unit}
                                                     </p>
                                                 </div>
