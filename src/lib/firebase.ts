@@ -6,12 +6,12 @@ import { initializeApp } from 'firebase/app';
 // TODO: Replace with your Firebase project configuration
 // You can copy these values from the Firebase Console -> Project Settings
 const firebaseConfig = {
-    apiKey: 'AIzaSyAYqSmclW-tieeGIenPNFWWkGmn7fPRVMA',
-    authDomain: 'danush-billing.firebaseapp.com',
-    projectId: 'danush-billing',
-    storageBucket: 'danush-billing.firebasestorage.app',
-    messagingSenderId: '95075767607',
-    appId: '1:95075767607:web:ffade1f7af09a8b39776b2',
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+    appId: import.meta.env.VITE_FIREBASE_APP_ID,
 };
 
 const app = initializeApp(firebaseConfig);
