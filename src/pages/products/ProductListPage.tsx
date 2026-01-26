@@ -1,10 +1,12 @@
 import * as z from 'zod';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import type { Category, Product } from '@/lib/types';
+import type { Category, Product, Shop } from '@/lib/types';
+import { Controller, useForm } from 'react-hook-form';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Timestamp, addDoc, collection, doc, getDocs, query, updateDoc, where } from 'firebase/firestore';
-import { useEffect, useState } from 'react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Timestamp, addDoc, collection, doc, getDoc, getDocs, query, updateDoc, where } from 'firebase/firestore';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,14 +16,13 @@ import { formatCurrency } from '@/lib/utils';
 import { generateSKU } from '@/lib/billUtils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
-import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 
 const productFormSchema = z.object({
     name: z.string().trim().min(1, 'Product name is required'),
     sku: z.string().trim().min(1, 'SKU is required'),
     categoryId: z.string().min(1, 'Category is required'),
-    retailPrice: z.coerce.number().min(0, 'Retail price must be positive'),
+    retailPrice: z.coerce.number().min(0.01, 'Retail price must be positive'),
     wholesalePrice: z.coerce.number().min(0, 'Wholesale price must be positive').optional(),
     costPrice: z.coerce.number().min(0.01, 'Cost price is required and must be greater than 0'),
     currentStock: z.coerce.number().min(0, 'Stock must be positive'),
@@ -34,6 +35,7 @@ export default function ProductListPage() {
     const { userData } = useAuth();
     const [products, setProducts] = useState<Product[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
+    const [units, setUnits] = useState<string[]>([]); // Default units
     const [isLoading, setIsLoading] = useState(false);
     const [showForm, setShowForm] = useState(false);
     const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -44,161 +46,181 @@ export default function ProductListPage() {
         register,
         handleSubmit,
         reset,
+        control,
         formState: { errors },
     } = useForm<ProductFormValues>({
+        mode: 'onSubmit', // Only validate on submit to prevent lag
         resolver: zodResolver(productFormSchema) as any,
         defaultValues: {
             sku: generateSKU(),
-            unit: 'pcs',
-            currentStock: 0,
         },
     });
 
-    useEffect(() => {
-        fetchProducts();
-        fetchCategories();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [userData]);
-
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
         if (!userData?.shopId) return;
 
         const q = query(collection(db, 'categories'), where('shopId', '==', userData.shopId), where('isActive', '==', true));
         const snapshot = await getDocs(q);
         const categoryList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Category);
         setCategories(categoryList.sort((a, b) => a.name.localeCompare(b.name)));
-    };
+    }, [userData?.shopId]);
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         if (!userData?.shopId) return;
 
         const q = query(collection(db, 'products'), where('shopId', '==', userData.shopId));
         const snapshot = await getDocs(q);
         const productList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }) as Product);
         setProducts(productList);
-    };
+    }, [userData?.shopId]);
 
-    const onSubmit = async (data: ProductFormValues) => {
-        if (!userData?.shopId) {
-            toast.error('No Shop ID associated with your account');
-            return;
-        }
+    const fetchUnits = useCallback(async () => {
+        if (!userData?.shopId) return;
 
-        setIsLoading(true);
         try {
-            // Check for duplicate SKU
-            const skuQuery = query(collection(db, 'products'), where('shopId', '==', userData.shopId), where('sku', '==', data.sku));
-            const skuSnapshot = await getDocs(skuQuery);
+            const docRef = doc(db, 'shops', userData.shopId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const shopData = docSnap.data() as Shop;
+                if (shopData.units && shopData.units.length > 0) {
+                    setUnits(shopData.units);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching units:', error);
+        }
+    }, [userData?.shopId]);
 
-            if (skuSnapshot.docs.length > 0) {
-                toast.error('A product with this SKU already exists');
-                setIsLoading(false);
+    useEffect(() => {
+        fetchProducts();
+        fetchCategories();
+        fetchUnits();
+    }, [fetchCategories, fetchProducts, fetchUnits, userData]);
+
+    const onSubmit = useCallback(
+        async (data: ProductFormValues) => {
+            if (!userData?.shopId) {
+                toast.error('No Shop ID associated with your account');
                 return;
             }
 
-            // Get category name if categoryId is provided
-            const categoryName = data.categoryId ? categories.find(c => c.id === data.categoryId)?.name : undefined;
+            setIsLoading(true);
+            try {
+                // Check for duplicate SKU
+                const skuQuery = query(collection(db, 'products'), where('shopId', '==', userData.shopId), where('sku', '==', data.sku));
+                const skuSnapshot = await getDocs(skuQuery);
 
-            await addDoc(collection(db, 'products'), {
-                ...data,
-                categoryName,
-                shopId: userData.shopId,
-                isActive: true,
-                createdAt: Timestamp.now(),
-                updatedAt: Timestamp.now(),
-            });
+                if (skuSnapshot.docs.length > 0) {
+                    toast.error('A product with this SKU already exists');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Get category name if categoryId is provided
+                const categoryName = data.categoryId ? categories.find(c => c.id === data.categoryId)?.name : undefined;
+
+                await addDoc(collection(db, 'products'), {
+                    ...data,
+                    categoryName,
+                    shopId: userData.shopId,
+                    isActive: true,
+                    createdAt: Timestamp.now(),
+                    updatedAt: Timestamp.now(),
+                });
+                reset({
+                    sku: generateSKU(),
+                });
+                setShowForm(false);
+                fetchProducts();
+                toast.success('Product added successfully!');
+            } catch (error) {
+                console.error('Error adding product:', error);
+                toast.error('Failed to add product');
+            } finally {
+                setIsLoading(false);
+            }
+        },
+        [categories, fetchProducts, reset, userData?.shopId],
+    );
+
+    const handleEdit = useCallback(
+        (product: Product) => {
+            setEditingProduct(product);
+            // Reset form with product values
             reset({
-                sku: generateSKU(),
-                unit: 'pcs',
-                currentStock: 0,
+                name: product.name,
+                sku: product.sku,
+                categoryId: product.categoryId || '',
+                retailPrice: product.retailPrice,
+                wholesalePrice: product.wholesalePrice || 0,
+                costPrice: product.costPrice || 0,
+                currentStock: product.currentStock,
+                unit: product.unit,
             });
-            setShowForm(false);
-            fetchProducts();
-            toast.success('Product added successfully!');
-        } catch (error) {
-            console.error('Error adding product:', error);
-            toast.error('Failed to add product');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+            setShowEditDialog(true);
+        },
+        [reset],
+    );
 
-    const handleEdit = (product: Product) => {
-        setEditingProduct(product);
-        // Reset form with product values
-        reset({
-            name: product.name,
-            sku: product.sku,
-            categoryId: product.categoryId || '',
-            retailPrice: product.retailPrice,
-            wholesalePrice: product.wholesalePrice || 0,
-            costPrice: product.costPrice || 0,
-            currentStock: product.currentStock,
-            unit: product.unit,
-        });
-        setShowEditDialog(true);
-    };
-
-    const handleCloseEditDialog = () => {
+    const handleCloseEditDialog = useCallback(() => {
         setShowEditDialog(false);
         setEditingProduct(null);
         // Reset form to default values
         reset({
             sku: generateSKU(),
-            unit: 'pcs',
-            currentStock: 0,
         });
-    };
+    }, [reset]);
 
-    const handleUpdate = async (data: ProductFormValues) => {
-        if (!editingProduct?.id || !userData?.shopId) return;
+    const handleUpdate = useCallback(
+        async (data: ProductFormValues) => {
+            if (!editingProduct?.id || !userData?.shopId) return;
 
-        setIsLoading(true);
-        try {
-            // Check for duplicate SKU, excluding the current product
-            const skuQuery = query(collection(db, 'products'), where('shopId', '==', userData.shopId), where('sku', '==', data.sku));
-            const skuSnapshot = await getDocs(skuQuery);
+            setIsLoading(true);
+            try {
+                // Check for duplicate SKU, excluding the current product
+                const skuQuery = query(collection(db, 'products'), where('shopId', '==', userData.shopId), where('sku', '==', data.sku));
+                const skuSnapshot = await getDocs(skuQuery);
 
-            const duplicateExists = skuSnapshot.docs.some(doc => doc.id !== editingProduct.id);
+                const duplicateExists = skuSnapshot.docs.some(doc => doc.id !== editingProduct.id);
 
-            if (duplicateExists) {
-                toast.error('A product with this SKU already exists');
+                if (duplicateExists) {
+                    toast.error('A product with this SKU already exists');
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Get category name if categoryId is provided
+                const categoryName = data.categoryId ? categories.find(c => c.id === data.categoryId)?.name : undefined;
+
+                await updateDoc(doc(db, 'products', editingProduct.id), {
+                    name: data.name,
+                    sku: data.sku,
+                    categoryId: data.categoryId || '',
+                    categoryName: categoryName || '',
+                    retailPrice: data.retailPrice,
+                    wholesalePrice: data.wholesalePrice || 0,
+                    costPrice: data.costPrice || 0,
+                    currentStock: data.currentStock,
+                    unit: data.unit,
+                    updatedAt: Timestamp.now(),
+                });
+                setShowEditDialog(false);
+                setEditingProduct(null);
+                // Reset form to default values
+                reset({
+                    sku: generateSKU(),
+                });
+                fetchProducts();
+                toast.success('Product updated successfully!');
+            } catch (error) {
+                console.error('Error updating product:', error);
+                toast.error('Failed to update product');
+            } finally {
                 setIsLoading(false);
-                return;
             }
-
-            // Get category name if categoryId is provided
-            const categoryName = data.categoryId ? categories.find(c => c.id === data.categoryId)?.name : undefined;
-
-            await updateDoc(doc(db, 'products', editingProduct.id), {
-                name: data.name,
-                sku: data.sku,
-                categoryId: data.categoryId || '',
-                categoryName: categoryName || '',
-                retailPrice: data.retailPrice,
-                wholesalePrice: data.wholesalePrice || 0,
-                costPrice: data.costPrice || 0,
-                currentStock: data.currentStock,
-                unit: data.unit,
-                updatedAt: Timestamp.now(),
-            });
-            setShowEditDialog(false);
-            setEditingProduct(null);
-            // Reset form to default values
-            reset({
-                sku: generateSKU(),
-                unit: 'pcs',
-                currentStock: 0,
-            });
-            fetchProducts();
-            toast.success('Product updated successfully!');
-        } catch (error) {
-            console.error('Error updating product:', error);
-            toast.error('Failed to update product');
-        } finally {
-            setIsLoading(false);
-        }
-    };
+        },
+        [editingProduct?.id, userData?.shopId, categories, reset, fetchProducts],
+    );
 
     // Filter products based on search term (name, SKU, or category)
     const filteredProducts = products.filter(
@@ -217,8 +239,6 @@ export default function ProductListPage() {
                         if (!showForm) {
                             reset({
                                 sku: generateSKU(),
-                                unit: 'pcs',
-                                currentStock: 0,
                             });
                         }
                         setShowForm(!showForm);
@@ -251,18 +271,24 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='categoryId'>Category *</Label>
-                                    <select
-                                        id='categoryId'
-                                        {...register('categoryId')}
-                                        className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-                                    >
-                                        <option value=''>Select Category</option>
-                                        {categories.map(category => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <Controller
+                                        name='categoryId'
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder='Select Category' />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories.map(category => (
+                                                        <SelectItem key={category.id} value={category.id || ''}>
+                                                            {category.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                     {errors.categoryId && <p className='text-red-500 text-xs'>{errors.categoryId.message}</p>}
                                 </div>
 
@@ -285,14 +311,31 @@ export default function ProductListPage() {
                                 </div>
 
                                 <div className='grid gap-2'>
-                                    <Label htmlFor='currentStock'>Current Stock</Label>
+                                    <Label htmlFor='currentStock'>Current Stock *</Label>
                                     <Input id='currentStock' type='number' {...register('currentStock')} placeholder='0' />
                                     {errors.currentStock && <p className='text-red-500 text-xs'>{errors.currentStock.message}</p>}
                                 </div>
 
                                 <div className='grid gap-2'>
-                                    <Label htmlFor='unit'>Unit</Label>
-                                    <Input id='unit' {...register('unit')} placeholder='pcs, kg, ltr' />
+                                    <Label htmlFor='unit'>Unit *</Label>
+                                    <Controller
+                                        name='unit'
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder='Select unit' />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {units.map(unit => (
+                                                        <SelectItem key={unit} value={unit}>
+                                                            {unit}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                     {errors.unit && <p className='text-red-500 text-xs'>{errors.unit.message}</p>}
                                 </div>
                             </div>
@@ -408,18 +451,24 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-categoryId'>Category *</Label>
-                                    <select
-                                        id='edit-categoryId'
-                                        {...register('categoryId')}
-                                        className='flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2'
-                                    >
-                                        <option value=''>Select Category</option>
-                                        {categories.map(category => (
-                                            <option key={category.id} value={category.id}>
-                                                {category.name}
-                                            </option>
-                                        ))}
-                                    </select>
+                                    <Controller
+                                        name='categoryId'
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger id='edit-categoryId'>
+                                                    <SelectValue placeholder='Select Category' />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {categories.map(category => (
+                                                        <SelectItem key={category.id} value={category.id || ''}>
+                                                            {category.name}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                     {errors.categoryId && <p className='text-red-500 text-xs'>{errors.categoryId.message}</p>}
                                 </div>
 
@@ -449,7 +498,24 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-unit'>Unit</Label>
-                                    <Input id='edit-unit' {...register('unit')} />
+                                    <Controller
+                                        name='unit'
+                                        control={control}
+                                        render={({ field }) => (
+                                            <Select onValueChange={field.onChange} value={field.value}>
+                                                <SelectTrigger id='edit-unit'>
+                                                    <SelectValue placeholder='Select unit' />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {units.map(unit => (
+                                                        <SelectItem key={unit} value={unit}>
+                                                            {unit}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    />
                                     {errors.unit && <p className='text-red-500 text-xs'>{errors.unit.message}</p>}
                                 </div>
                             </div>

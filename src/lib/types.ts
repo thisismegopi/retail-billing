@@ -8,6 +8,7 @@ export interface Shop {
     email: string;
     gstNumber: string;
     logoUrl?: string;
+    units?: string[]; // Configurable units for products
     createdAt: Timestamp;
     updatedAt: Timestamp;
 }

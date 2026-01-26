@@ -9,10 +9,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import type { Shop } from '@/lib/types';
 import { db } from '@/lib/firebase';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { toast } from 'sonner';
 
 const shopSchema = z.object({
     name: z.string().min(3, 'Shop name must be at least 3 characters'),
@@ -135,6 +135,113 @@ export default function ShopSettingsPage() {
                     </form>
                 </CardContent>
             </Card>
+
+            {/* Units Management Card */}
+            <UnitsManagement shopId={userData?.shopId || ''} />
         </div>
+    );
+}
+
+// Units Management Component
+function UnitsManagement({ shopId }: { shopId: string }) {
+    const [units, setUnits] = useState<string[]>([]);
+    const [newUnit, setNewUnit] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+
+    useEffect(() => {
+        fetchUnits();
+    }, [shopId]);
+
+    const fetchUnits = async () => {
+        if (!shopId) return;
+
+        try {
+            const docRef = doc(db, 'shops', shopId);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                const data = docSnap.data() as Shop;
+                if (data.units && data.units.length > 0) {
+                    setUnits(data.units);
+                }
+            }
+        } catch (error) {
+            console.error('Error fetching units:', error);
+        }
+    };
+
+    const handleAddUnit = () => {
+        const trimmedUnit = newUnit.trim().toLowerCase();
+        if (!trimmedUnit) {
+            toast.error('Unit name cannot be empty');
+            return;
+        }
+        if (units.includes(trimmedUnit)) {
+            toast.error('Unit already exists');
+            return;
+        }
+        setUnits([...units, trimmedUnit]);
+        setNewUnit('');
+    };
+
+    const handleRemoveUnit = (unitToRemove: string) => {
+        setUnits(units.filter(u => u !== unitToRemove));
+    };
+
+    const handleSaveUnits = async () => {
+        if (!shopId) return;
+
+        setIsLoading(true);
+        try {
+            const docRef = doc(db, 'shops', shopId);
+            await setDoc(docRef, { units, updatedAt: Timestamp.now() }, { merge: true });
+            toast.success('Units updated successfully!');
+        } catch (error) {
+            console.error('Error saving units:', error);
+            toast.error('Failed to update units');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Card className='mt-4'>
+            <CardHeader>
+                <CardTitle>Product Units</CardTitle>
+                <CardDescription>Manage available units for products (e.g., pcs, kg, ltr)</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className='space-y-4'>
+                    {/* Add new unit */}
+                    <div className='flex gap-2'>
+                        <Input placeholder='Enter new unit (e.g., box, dozen)' value={newUnit} onChange={e => setNewUnit(e.target.value)} onKeyPress={e => e.key === 'Enter' && handleAddUnit()} />
+                        <Button type='button' onClick={handleAddUnit}>
+                            Add Unit
+                        </Button>
+                    </div>
+
+                    {/* List of units */}
+                    <div className='space-y-2'>
+                        <Label>Current Units</Label>
+                        <div className='flex flex-wrap gap-2'>
+                            {units.map(unit => (
+                                <div key={unit} className='flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md'>
+                                    <span className='text-sm'>{unit}</span>
+                                    <button type='button' onClick={() => handleRemoveUnit(unit)} className='text-red-500 hover:text-red-700 text-sm font-bold' title='Remove unit'>
+                                        ×
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Save button */}
+                    <div className='flex justify-end'>
+                        <Button onClick={handleSaveUnits} disabled={isLoading}>
+                            {isLoading ? 'Saving...' : 'Save Units'}
+                        </Button>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
 }
