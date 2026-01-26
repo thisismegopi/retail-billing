@@ -43,8 +43,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                             ? {
                                   ...item,
                                   quantity: newQuantity,
-                                  totalAmount: newQuantity * item.sellingPrice,
-                                  totalProfit: profitPerItem * newQuantity,
+                                  totalAmount: Math.round(newQuantity * item.sellingPrice * 100) / 100,
+                                  totalProfit: Math.round(profitPerItem * newQuantity * 100) / 100,
                               }
                             : item,
                     );
@@ -64,9 +64,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     sellingPrice,
                     discount: 0,
                     tax: 0,
-                    totalAmount: quantity * sellingPrice,
+                    totalAmount: Math.round(quantity * sellingPrice * 100) / 100,
                     profitPerItem,
-                    totalProfit: profitPerItem * quantity,
+                    totalProfit: Math.round(profitPerItem * quantity * 100) / 100,
                 };
                 return [...prev, newItem];
             });
@@ -91,8 +91,8 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                         return {
                             ...item,
                             quantity,
-                            totalAmount: quantity * item.sellingPrice,
-                            totalProfit: profitPerItem * quantity,
+                            totalAmount: Math.round(quantity * item.sellingPrice * 100) / 100,
+                            totalProfit: Math.round(profitPerItem * quantity * 100) / 100,
                         };
                     }
                     return item;
@@ -110,9 +110,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     return {
                         ...item,
                         sellingPrice: price,
-                        totalAmount: item.quantity * price,
+                        totalAmount: Math.round(item.quantity * price * 100) / 100,
                         profitPerItem,
-                        totalProfit: profitPerItem * item.quantity,
+                        totalProfit: Math.round(profitPerItem * item.quantity * 100) / 100,
                     };
                 }
                 return item;
@@ -144,9 +144,9 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, []);
 
     // Calculate totals
-    const subtotal = items.reduce((sum, item) => sum + item.totalAmount, 0);
-    const taxAmount = ((subtotal - discount) * taxRate) / 100;
-    const totalAmount = subtotal - discount + taxAmount;
+    const subtotal = Math.round(items.reduce((sum, item) => sum + item.totalAmount, 0) * 100) / 100;
+    const taxAmount = Math.round((((subtotal - discount) * taxRate) / 100) * 100) / 100;
+    const totalAmount = Math.round((subtotal - discount + taxAmount) * 100) / 100;
 
     return (
         <CartContext.Provider

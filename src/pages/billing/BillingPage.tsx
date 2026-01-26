@@ -227,7 +227,17 @@ export default function BillingPage() {
                                                         <Button size='sm' variant='outline' onClick={() => updateQuantity(item.productId, item.quantity - 1)}>
                                                             <Minus className='h-3 w-3' />
                                                         </Button>
-                                                        <span className='w-12 text-center'>{item.quantity}</span>
+                                                        <Input
+                                                            type='number'
+                                                            step='any'
+                                                            min='0'
+                                                            value={item.quantity}
+                                                            onChange={e => {
+                                                                const newQty = parseFloat(e.target.value) || 0;
+                                                                updateQuantity(item.productId, newQty);
+                                                            }}
+                                                            className='w-20 text-center'
+                                                        />
                                                         <Button size='sm' variant='outline' onClick={() => updateQuantity(item.productId, item.quantity + 1)}>
                                                             <Plus className='h-3 w-3' />
                                                         </Button>

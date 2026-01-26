@@ -312,7 +312,7 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='currentStock'>Current Stock *</Label>
-                                    <Input id='currentStock' type='number' {...register('currentStock')} placeholder='0' />
+                                    <Input id='currentStock' type='number' step='0.001' {...register('currentStock')} placeholder='0.000' />
                                     {errors.currentStock && <p className='text-red-500 text-xs'>{errors.currentStock.message}</p>}
                                 </div>
 
@@ -492,7 +492,7 @@ export default function ProductListPage() {
 
                                 <div className='grid gap-2'>
                                     <Label htmlFor='edit-currentStock'>Current Stock</Label>
-                                    <Input id='edit-currentStock' type='number' {...register('currentStock')} />
+                                    <Input id='edit-currentStock' type='number' step='0.001' placeholder='0.000' {...register('currentStock')} />
                                     {errors.currentStock && <p className='text-red-500 text-xs'>{errors.currentStock.message}</p>}
                                 </div>
 
