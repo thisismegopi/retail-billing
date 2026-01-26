@@ -11,6 +11,7 @@ import { generateBillNumber } from '@/lib/billUtils';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useCart } from '@/hooks/useCart';
+import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 
 interface CheckoutDialogProps {
@@ -24,6 +25,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
     const [paymentMethod, setPaymentMethod] = useState<'cash' | 'card' | 'upi' | 'credit'>('cash');
     const [cashTendered, setCashTendered] = useState<string>('');
     const [isProcessing, setIsProcessing] = useState(false);
+    const navigate = useNavigate();
 
     // Calculate change to return
     const cashAmount = parseFloat(cashTendered) || 0;
@@ -101,7 +103,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
             onOpenChange(false);
 
             // Open invoice in new tab
-            window.open(`/invoice/${billRef.id}`, '_blank');
+            navigate(`/invoice/${billRef.id}`);
         } catch (error) {
             console.error('Error creating bill:', error);
             toast.error('Failed to create bill. Please try again');

@@ -32,7 +32,7 @@ export default function LoginPage() {
         setError('');
         try {
             await signInWithEmailAndPassword(auth, data.email, data.password);
-            navigate('/retail-billing');
+            navigate('/');
         } catch (e: any) {
             setError('Failed to sign in. Please check your credentials.');
             console.error(e);

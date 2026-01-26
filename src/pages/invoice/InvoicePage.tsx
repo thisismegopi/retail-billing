@@ -1,20 +1,30 @@
-import type { Bill, Shop } from '@/lib/types';
+import { PDFDownloadLink, PDFViewer } from '@react-pdf/renderer';
 import { doc, getDoc } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
+import type { Bill } from '@/lib/types';
+import { Button } from '@/components/ui/button';
+import InvoicePDF from '@/components/invoice/InvoicePDF';
+import type { Shop } from '@/lib/types';
 import { db } from '@/lib/firebase';
-import { formatCurrency } from '@/lib/utils';
-import { useParams } from 'react-router-dom';
 
 export default function InvoicePage() {
     const { billId } = useParams<{ billId: string }>();
     const [bill, setBill] = useState<Bill | null>(null);
     const [shopDetails, setShopDetails] = useState<Shop | null>(null);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchBillData = async () => {
-            if (!billId) return;
+            if (!billId) {
+                setError('Bill ID is missing');
+                setLoading(false);
+                return;
+            }
 
             try {
                 // Fetch bill
@@ -28,9 +38,12 @@ export default function InvoicePage() {
                     if (shopDoc.exists()) {
                         setShopDetails({ id: shopDoc.id, ...shopDoc.data() } as Shop);
                     }
+                } else {
+                    setError('Bill not found');
                 }
             } catch (error) {
                 console.error('Error fetching bill:', error);
+                setError('Failed to load bill');
             } finally {
                 setLoading(false);
             }
@@ -39,179 +52,47 @@ export default function InvoicePage() {
         fetchBillData();
     }, [billId]);
 
-    const handlePrint = () => {
-        window.print();
-    };
-
     if (loading) {
         return (
-            <div className='flex items-center justify-center min-h-screen'>
+            <div className='flex items-center justify-center min-h-screen bg-background'>
                 <div className='text-lg'>Loading invoice...</div>
             </div>
         );
     }
 
-    if (!bill) {
+    if (error || !bill) {
         return (
-            <div className='flex items-center justify-center min-h-screen'>
-                <div className='text-lg text-red-600'>Bill not found</div>
+            <div className='flex flex-col items-center justify-center min-h-screen bg-background gap-4'>
+                <div className='text-lg text-red-600'>{error || 'Bill not found'}</div>
+                <Button onClick={() => navigate(-1)}>Go Back</Button>
             </div>
         );
     }
 
     return (
-        <div className='min-h-screen bg-background p-8'>
-            <div className='max-w-4xl mx-auto bg-card shadow-lg rounded-lg overflow-hidden'>
-                {/* Print Button - Hidden when printing */}
-                <div className='p-4 bg-muted border-b print:hidden'>
-                    <button onClick={handlePrint} className='px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors'>
-                        Print Invoice
-                    </button>
+        <div className='h-screen w-full flex flex-col bg-background'>
+            {/* Header with Download Button */}
+            <div className='flex items-center justify-between p-4 border-b bg-card'>
+                <div>
+                    <h1 className='text-xl font-semibold'>Invoice - {bill.billNumber}</h1>
+                    <p className='text-sm text-muted-foreground'>View and download your invoice</p>
                 </div>
-
-                {/* Invoice Content */}
-                <div className='p-8'>
-                    {/* Header */}
-                    <div className='text-center mb-8 border-b pb-6'>
-                        <h1 className='text-3xl font-bold text-foreground'>{shopDetails?.name || 'Shop'}</h1>
-                        {shopDetails?.address && <p className='text-sm text-muted-foreground mt-1'>{shopDetails.address}</p>}
-                        <div className='flex justify-center gap-4 mt-2 text-sm text-muted-foreground'>
-                            {shopDetails?.phone && <span>Phone: {shopDetails.phone}</span>}
-                            {shopDetails?.email && <span>Email: {shopDetails.email}</span>}
-                        </div>
-                        {shopDetails?.gstNumber && <p className='text-sm text-muted-foreground mt-1'>GST: {shopDetails.gstNumber}</p>}
-                        <p className='text-sm font-semibold text-foreground mt-3'>INVOICE</p>
-                    </div>
-
-                    {/* Bill Info */}
-                    <div className='grid grid-cols-2 gap-4 mb-8 pb-4 border-b'>
-                        <div>
-                            <p className='text-sm text-muted-foreground'>Bill Number</p>
-                            <p className='font-semibold text-lg'>{bill.billNumber}</p>
-                        </div>
-                        <div className='text-right'>
-                            <p className='text-sm text-muted-foreground'>Date</p>
-                            <p className='font-semibold'>
-                                {bill.billDate?.toDate().toLocaleDateString('en-IN', {
-                                    day: '2-digit',
-                                    month: 'short',
-                                    year: 'numeric',
-                                })}
-                            </p>
-                        </div>
-                        {bill.customerName && (
-                            <>
-                                <div>
-                                    <p className='text-sm text-muted-foreground'>Customer Name</p>
-                                    <p className='font-semibold'>{bill.customerName}</p>
-                                </div>
-                                <div className='text-right'>
-                                    <p className='text-sm text-muted-foreground'>Customer Type</p>
-                                    <p className='font-semibold capitalize'>{bill.customerType}</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Line Items */}
-                    <div className='mb-8'>
-                        <h2 className='text-lg font-semibold mb-4'>Items</h2>
-                        <table className='w-full'>
-                            <thead>
-                                <tr className='border-b-2 border-border'>
-                                    <th className='text-left py-2 px-2'>#</th>
-                                    <th className='text-left py-2 px-2'>Product</th>
-                                    <th className='text-right py-2 px-2'>Qty</th>
-                                    <th className='text-right py-2 px-2'>Price</th>
-                                    <th className='text-right py-2 px-2'>Amount</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {bill.items.map((item, index) => (
-                                    <tr key={index} className='border-b'>
-                                        <td className='py-3 px-2'>{index + 1}</td>
-                                        <td className='py-3 px-2'>{item.productName}</td>
-                                        <td className='py-3 px-2 text-right'>
-                                            {item.quantity} {item.unit}
-                                        </td>
-                                        <td className='py-3 px-2 text-right'>{formatCurrency(item.sellingPrice)}</td>
-                                        <td className='py-3 px-2 text-right font-semibold'>{formatCurrency(item.totalAmount)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    {/* Summary */}
-                    <div className='flex justify-end mb-8'>
-                        <div className='w-64'>
-                            <div className='flex justify-between py-2'>
-                                <span className='text-muted-foreground'>Subtotal:</span>
-                                <span className='font-semibold'>{formatCurrency(bill.subtotal)}</span>
-                            </div>
-                            <div className='flex justify-between py-2'>
-                                <span className='text-muted-foreground'>Discount:</span>
-                                <span className='font-semibold text-red-600'>-{formatCurrency(bill.discount)}</span>
-                            </div>
-                            <div className='flex justify-between py-2'>
-                                <span className='text-muted-foreground'>Tax:</span>
-                                <span className='font-semibold'>{formatCurrency(bill.taxAmount)}</span>
-                            </div>
-                            <div className='flex justify-between py-3 border-t-2 border-border'>
-                                <span className='text-lg font-bold'>Total:</span>
-                                <span className='text-lg font-bold text-green-600'>{formatCurrency(bill.totalAmount)}</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Payment Info */}
-                    <div className='grid grid-cols-2 gap-4 pt-4 border-t'>
-                        <div>
-                            <p className='text-sm text-muted-foreground'>Payment Method</p>
-                            <p className='font-semibold capitalize'>{bill.paymentMethod}</p>
-                        </div>
-                        <div className='text-right'>
-                            <p className='text-sm text-muted-foreground'>Payment Status</p>
-                            <p className={`font-semibold capitalize ${bill.paymentStatus === 'paid' ? 'text-green-600' : bill.paymentStatus === 'partial' ? 'text-yellow-600' : 'text-red-600'}`}>
-                                {bill.paymentStatus}
-                            </p>
-                        </div>
-                        {bill.balanceAmount > 0 && (
-                            <>
-                                <div>
-                                    <p className='text-sm text-muted-foreground'>Paid Amount</p>
-                                    <p className='font-semibold'>{formatCurrency(bill.paidAmount)}</p>
-                                </div>
-                                <div className='text-right'>
-                                    <p className='text-sm text-muted-foreground'>Balance Due</p>
-                                    <p className='font-semibold text-red-600'>{formatCurrency(bill.balanceAmount)}</p>
-                                </div>
-                            </>
-                        )}
-                    </div>
-
-                    {/* Footer */}
-                    <div className='mt-12 pt-4 border-t text-center text-sm text-muted-foreground'>
-                        <p>Thank you for your business!</p>
-                    </div>
+                <div className='flex gap-2'>
+                    <Button variant='outline' onClick={() => navigate(-1)}>
+                        Back
+                    </Button>
+                    <PDFDownloadLink document={<InvoicePDF bill={bill} shopDetails={shopDetails} />} fileName={`Invoice-${bill.billNumber}.pdf`}>
+                        {({ loading }) => <Button disabled={loading}>{loading ? 'Preparing...' : 'Download PDF'}</Button>}
+                    </PDFDownloadLink>
                 </div>
             </div>
 
-            {/* Print Styles */}
-            <style>{`
-                @media print {
-                    body {
-                        margin: 0;
-                        padding: 0;
-                    }
-                    .print\\:hidden {
-                        display: none !important;
-                    }
-                    @page {
-                        margin: 0.5cm;
-                    }
-                }
-            `}</style>
+            {/* PDF Viewer */}
+            <div className='flex-1 w-full'>
+                <PDFViewer width='100%' height='100%' showToolbar={true}>
+                    <InvoicePDF bill={bill} shopDetails={shopDetails} />
+                </PDFViewer>
+            </div>
         </div>
     );
 }

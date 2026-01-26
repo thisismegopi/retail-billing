@@ -34,18 +34,18 @@ export default function MainLayout() {
 
     const handleLogout = async () => {
         await signOut(auth);
-        navigate('/retail-billing/auth/login');
+        navigate('/auth/login');
     };
 
     const navItems = [
-        { path: '/retail-billing', label: 'Dashboard', icon: LayoutDashboard },
-        { path: '/retail-billing/billing', label: 'Billing', icon: ShoppingCart },
-        { path: '/retail-billing/products', label: 'Products', icon: Package },
-        { path: '/retail-billing/categories', label: 'Categories', icon: Folder },
-        { path: '/retail-billing/customers', label: 'Customers', icon: Users },
-        { path: '/retail-billing/collections', label: 'Collections', icon: DollarSign },
-        { path: '/retail-billing/reports', label: 'Reports', icon: BarChart3 },
-        { path: '/retail-billing/settings', label: 'Settings', icon: Settings },
+        { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+        { path: '/billing', label: 'Billing', icon: ShoppingCart },
+        { path: '/products', label: 'Products', icon: Package },
+        { path: '/categories', label: 'Categories', icon: Folder },
+        { path: '/customers', label: 'Customers', icon: Users },
+        { path: '/collections', label: 'Collections', icon: DollarSign },
+        { path: '/reports', label: 'Reports', icon: BarChart3 },
+        { path: '/settings', label: 'Settings', icon: Settings },
     ];
 
     return (

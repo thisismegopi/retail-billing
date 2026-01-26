@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 
 import AuthLayout from '@/layouts/AuthLayout';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -29,16 +29,16 @@ function App() {
     return (
         <AuthProvider>
             <CartProvider>
-                <BrowserRouter>
+                <HashRouter>
                     <Routes>
                         {/* Public Routes */}
-                        <Route path='/retail-billing/auth' element={<AuthLayout />}>
+                        <Route path='/auth' element={<AuthLayout />}>
                             <Route path='login' element={<LoginPage />} />
                         </Route>
 
                         {/* Protected Routes */}
                         <Route element={<ProtectedRoute />}>
-                            <Route path='/retail-billing' element={<MainLayout />}>
+                            <Route path='/' element={<MainLayout />}>
                                 <Route index element={<DashboardPage />} />
                                 <Route path='billing' element={<BillingPage />} />
                                 <Route path='products' element={<ProductListPage />} />
@@ -50,13 +50,13 @@ function App() {
                                 <Route path='settings' element={<ShopSettingsPage />} />
                             </Route>
                             {/* Invoice route - outside main layout for printing */}
-                            <Route path='/retail-billing/invoice/:billId' element={<InvoicePage />} />
+                            <Route path='/invoice/:billId' element={<InvoicePage />} />
                         </Route>
 
                         {/* Fallback */}
-                        <Route path='*' element={<Navigate to='/retail-billing/auth/login' replace />} />
+                        <Route path='*' element={<Navigate to='/auth/login' replace />} />
                     </Routes>
-                </BrowserRouter>
+                </HashRouter>
                 <Toaster />
             </CartProvider>
         </AuthProvider>

@@ -1,13 +1,15 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, ExternalLink, FileText, Package, Search, Users, XCircle } from 'lucide-react';
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, FileText, Package, Search, Users, XCircle } from 'lucide-react';
 import { DocumentSnapshot, Timestamp, collection, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import type { Bill } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Link } from 'react-router-dom';
 import { db } from '@/lib/firebase';
 import { formatCurrency } from '@/lib/utils';
+import invoiceIcon from '@/assets/icons/pdf.png';
 import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardStats {
@@ -318,7 +320,7 @@ export default function DashboardPage() {
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Amount</th>
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Balance</th>
                                     <th className='text-center py-3 px-4 font-medium text-sm'>Status</th>
-                                    <th className='text-center py-3 px-4 font-medium text-sm'>Actions</th>
+                                    <th className='text-center py-3 px-4 font-medium text-sm'>Invoice</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -338,13 +340,9 @@ export default function DashboardPage() {
                                             <td className='py-3 px-4 text-right font-medium'>{formatCurrency(bill.balanceAmount)}</td>
                                             <td className='py-3 px-4 text-center'>{getStatusBadge(bill)}</td>
                                             <td className='py-3 px-4 text-center'>
-                                                <button
-                                                    onClick={() => window.open(`/retail-billing/invoice/${bill.id}`, '_blank')}
-                                                    className='text-blue-600 hover:text-blue-800 transition-colors'
-                                                    title='View Invoice'
-                                                >
-                                                    <ExternalLink className='h-4 w-4' />
-                                                </button>
+                                                <Link to={`/invoice/${bill.id}`} title='View Invoice'>
+                                                    <img src={invoiceIcon} alt='Invoice' className='w-6 h-6' />
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))
