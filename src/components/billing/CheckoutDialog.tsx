@@ -48,6 +48,10 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
         setIsProcessing(true);
         try {
             const billNumber = generateBillNumber();
+
+            // Calculate total profit from all items
+            const totalProfit = items.reduce((sum, item) => sum + item.totalProfit, 0);
+
             const bill: Omit<Bill, 'id'> = {
                 shopId: userData.shopId,
                 billNumber,
@@ -60,6 +64,7 @@ export default function CheckoutDialog({ open, onOpenChange }: CheckoutDialogPro
                 discount,
                 taxAmount,
                 totalAmount,
+                totalProfit,
                 paidAmount: paymentMethod === 'credit' ? 0 : totalAmount,
                 balanceAmount: paymentMethod === 'credit' ? totalAmount : 0,
                 paymentStatus: paymentMethod === 'credit' ? 'unpaid' : 'paid',

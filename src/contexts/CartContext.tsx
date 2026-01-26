@@ -36,9 +36,22 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setItems(prev => {
                 const existing = prev.find(item => item.productId === product.id);
                 if (existing) {
-                    return prev.map(item => (item.productId === product.id ? { ...item, quantity: item.quantity + quantity, totalAmount: (item.quantity + quantity) * item.sellingPrice } : item));
+                    const newQuantity = existing.quantity + quantity;
+                    const profitPerItem = existing.sellingPrice - existing.costPrice;
+                    return prev.map(item =>
+                        item.productId === product.id
+                            ? {
+                                  ...item,
+                                  quantity: newQuantity,
+                                  totalAmount: newQuantity * item.sellingPrice,
+                                  totalProfit: profitPerItem * newQuantity,
+                              }
+                            : item,
+                    );
                 }
                 const sellingPrice = customerType === 'wholesale' && product.wholesalePrice ? product.wholesalePrice : product.retailPrice;
+                const costPrice = product.costPrice;
+                const profitPerItem = sellingPrice - costPrice;
                 const newItem: BillItem = {
                     productId: product.id!,
                     productName: product.name,
@@ -47,11 +60,13 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     categoryName: product.categoryName,
                     quantity,
                     unit: product.unit,
-                    costPrice: product.costPrice || 0,
+                    costPrice,
                     sellingPrice,
                     discount: 0,
                     tax: 0,
                     totalAmount: quantity * sellingPrice,
+                    profitPerItem,
+                    totalProfit: profitPerItem * quantity,
                 };
                 return [...prev, newItem];
             });
@@ -69,13 +84,40 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 removeItem(productId);
                 return;
             }
-            setItems(prev => prev.map(item => (item.productId === productId ? { ...item, quantity, totalAmount: quantity * item.sellingPrice } : item)));
+            setItems(prev =>
+                prev.map(item => {
+                    if (item.productId === productId) {
+                        const profitPerItem = item.sellingPrice - item.costPrice;
+                        return {
+                            ...item,
+                            quantity,
+                            totalAmount: quantity * item.sellingPrice,
+                            totalProfit: profitPerItem * quantity,
+                        };
+                    }
+                    return item;
+                }),
+            );
         },
         [removeItem],
     );
 
     const updatePrice = useCallback((productId: string, price: number) => {
-        setItems(prev => prev.map(item => (item.productId === productId ? { ...item, sellingPrice: price, totalAmount: item.quantity * price } : item)));
+        setItems(prev =>
+            prev.map(item => {
+                if (item.productId === productId) {
+                    const profitPerItem = price - item.costPrice;
+                    return {
+                        ...item,
+                        sellingPrice: price,
+                        totalAmount: item.quantity * price,
+                        profitPerItem,
+                        totalProfit: profitPerItem * item.quantity,
+                    };
+                }
+                return item;
+            }),
+        );
     }, []);
 
     const setCustomer = useCallback((name: string, type: 'retail' | 'wholesale', id: string | null = null) => {

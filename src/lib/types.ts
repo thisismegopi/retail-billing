@@ -40,7 +40,7 @@ export interface Product {
     categoryName?: string;
     retailPrice: number;
     wholesalePrice?: number;
-    costPrice?: number;
+    costPrice: number; // Required - cost/buy price for profit calculation
     currentStock: number;
     unit: string;
     isActive: boolean;
@@ -56,11 +56,13 @@ export interface BillItem {
     categoryName?: string;
     quantity: number;
     unit: string;
-    costPrice: number;
+    costPrice: number; // Cost at time of sale
     sellingPrice: number;
     discount: number;
     tax: number;
     totalAmount: number;
+    profitPerItem: number; // sellingPrice - costPrice
+    totalProfit: number; // profitPerItem * quantity
 }
 
 export interface Bill {
@@ -76,6 +78,7 @@ export interface Bill {
     discount: number;
     taxAmount: number;
     totalAmount: number;
+    totalProfit: number; // Sum of all item profits
     paidAmount: number;
     balanceAmount: number;
     paymentStatus: 'paid' | 'partial' | 'unpaid';

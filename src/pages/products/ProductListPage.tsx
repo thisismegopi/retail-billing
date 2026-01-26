@@ -23,7 +23,7 @@ const productFormSchema = z.object({
     categoryId: z.string().min(1, 'Category is required'),
     retailPrice: z.coerce.number().min(0, 'Retail price must be positive'),
     wholesalePrice: z.coerce.number().min(0, 'Wholesale price must be positive').optional(),
-    costPrice: z.coerce.number().min(0, 'Cost price must be positive').optional(),
+    costPrice: z.coerce.number().min(0.01, 'Cost price is required and must be greater than 0'),
     currentStock: z.coerce.number().min(0, 'Stock must be positive'),
     unit: z.string().trim().min(1, 'Unit is required'),
 });
@@ -279,7 +279,7 @@ export default function ProductListPage() {
                                 </div>
 
                                 <div className='grid gap-2'>
-                                    <Label htmlFor='costPrice'>Cost Price (Optional)</Label>
+                                    <Label htmlFor='costPrice'>Cost Price</Label>
                                     <Input id='costPrice' type='number' step='0.01' {...register('costPrice')} placeholder='0.00' />
                                     {errors.costPrice && <p className='text-red-500 text-xs'>{errors.costPrice.message}</p>}
                                 </div>
@@ -330,30 +330,48 @@ export default function ProductListPage() {
                                         <th className='text-left p-2'>Name</th>
                                         <th className='text-left p-2'>SKU</th>
                                         <th className='text-left p-2'>Category</th>
+                                        <th className='text-right p-2'>Cost Price</th>
                                         <th className='text-right p-2'>Retail Price</th>
+                                        <th className='text-right p-2'>Retail Profit</th>
+                                        {/* <th className='text-right p-2'>Retail Margin</th> */}
                                         <th className='text-right p-2'>Wholesale Price</th>
+                                        <th className='text-right p-2'>Wholesale Profit</th>
+                                        {/* <th className='text-right p-2'>Wholesale Margin</th> */}
                                         <th className='text-right p-2'>Stock</th>
                                         <th className='text-left p-2'>Unit</th>
                                         <th className='text-center p-2'>Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {filteredProducts.map(product => (
-                                        <tr key={product.id} className='border-b hover:bg-muted/50'>
-                                            <td className='p-2'>{product.name}</td>
-                                            <td className='p-2'>{product.sku}</td>
-                                            <td className='p-2 text-sm text-gray-600'>{product.categoryName || '-'}</td>
-                                            <td className='p-2 text-right'>{formatCurrency(product.retailPrice)}</td>
-                                            <td className='p-2 text-right'>{formatCurrency(product.wholesalePrice || 0)}</td>
-                                            <td className='p-2 text-right'>{product.currentStock}</td>
-                                            <td className='p-2'>{product.unit}</td>
-                                            <td className='p-2 text-center'>
-                                                <Button size='sm' variant='outline' onClick={() => handleEdit(product)}>
-                                                    Edit
-                                                </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
+                                    {filteredProducts.map(product => {
+                                        const costPrice = product.costPrice || 0;
+                                        const retailProfit = product.retailPrice - costPrice;
+                                        // const retailMargin = product.retailPrice > 0 ? (retailProfit / product.retailPrice) * 100 : 0;
+                                        const wholesaleProfit = (product.wholesalePrice || 0) - costPrice;
+                                        // const wholesaleMargin = (product.wholesalePrice || 0) > 0 ? (wholesaleProfit / (product.wholesalePrice || 1)) * 100 : 0;
+
+                                        return (
+                                            <tr key={product.id} className='border-b hover:bg-muted/50'>
+                                                <td className='p-2'>{product.name}</td>
+                                                <td className='p-2'>{product.sku}</td>
+                                                <td className='p-2 text-sm text-muted-foreground'>{product.categoryName || '-'}</td>
+                                                <td className='p-2 text-right'>{formatCurrency(costPrice)}</td>
+                                                <td className='p-2 text-right'>{formatCurrency(product.retailPrice)}</td>
+                                                <td className='p-2 text-right font-medium text-green-600'>{formatCurrency(retailProfit)}</td>
+                                                {/* <td className='p-2 text-right text-sm font-medium text-green-600'>{retailMargin.toFixed(1)}%</td> */}
+                                                <td className='p-2 text-right'>{formatCurrency(product.wholesalePrice || 0)}</td>
+                                                <td className='p-2 text-right font-medium text-green-600'>{formatCurrency(wholesaleProfit)}</td>
+                                                {/* <td className='p-2 text-right text-sm font-medium text-green-600'>{wholesaleMargin.toFixed(1)}%</td> */}
+                                                <td className='p-2 text-right'>{product.currentStock}</td>
+                                                <td className='p-2'>{product.unit}</td>
+                                                <td className='p-2 text-center'>
+                                                    <Button size='sm' variant='outline' onClick={() => handleEdit(product)}>
+                                                        Edit
+                                                    </Button>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
                                 </tbody>
                             </table>
                         </div>
@@ -418,7 +436,7 @@ export default function ProductListPage() {
                                 </div>
 
                                 <div className='grid gap-2'>
-                                    <Label htmlFor='edit-costPrice'>Cost Price (Optional)</Label>
+                                    <Label htmlFor='edit-costPrice'>Cost Price</Label>
                                     <Input id='edit-costPrice' type='number' step='0.01' {...register('costPrice')} />
                                     {errors.costPrice && <p className='text-red-500 text-xs'>{errors.costPrice.message}</p>}
                                 </div>

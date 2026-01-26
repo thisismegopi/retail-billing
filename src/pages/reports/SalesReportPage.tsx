@@ -19,6 +19,7 @@ export default function SalesReportPage() {
     const [endDate, setEndDate] = useState('');
     const [totalSales, setTotalSales] = useState(0);
     const [totalTax, setTotalTax] = useState(0);
+    const [totalProfit, setTotalProfit] = useState(0);
 
     useEffect(() => {
         fetchBills();
@@ -62,8 +63,10 @@ export default function SalesReportPage() {
 
         const total = filtered.reduce((sum, bill) => sum + bill.totalAmount, 0);
         const tax = filtered.reduce((sum, bill) => sum + bill.taxAmount, 0);
+        const profit = filtered.reduce((sum, bill) => sum + (bill.totalProfit || 0), 0);
         setTotalSales(total);
         setTotalTax(tax);
+        setTotalProfit(profit);
     };
 
     const handleExport = () => {
@@ -76,6 +79,7 @@ export default function SalesReportPage() {
             Discount: bill.discount.toFixed(2),
             Tax: bill.taxAmount.toFixed(2),
             Total: bill.totalAmount.toFixed(2),
+            Profit: (bill.totalProfit || 0).toFixed(2),
             'Payment Status': bill.paymentStatus,
             'Payment Method': bill.paymentMethod,
         }));
@@ -112,11 +116,18 @@ export default function SalesReportPage() {
             </Card>
 
             {/* Summary */}
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-4 gap-4'>
                 <Card>
                     <CardHeader className='pb-2'>
                         <CardDescription>Total Sales</CardDescription>
                         <CardTitle className='text-2xl'>{formatCurrency(totalSales)}</CardTitle>
+                    </CardHeader>
+                </Card>
+                <Card>
+                    <CardHeader className='pb-2'>
+                        <CardDescription>Total Profit</CardDescription>
+                        <CardTitle className='text-2xl text-green-600'>{formatCurrency(totalProfit)}</CardTitle>
+                        <p className='text-xs text-muted-foreground mt-1'>{totalSales > 0 ? `${((totalProfit / totalSales) * 100).toFixed(1)}% margin` : '0% margin'}</p>
                     </CardHeader>
                 </Card>
                 <Card>
@@ -150,17 +161,19 @@ export default function SalesReportPage() {
                                         <th className='text-left p-2'>Date</th>
                                         <th className='text-left p-2'>Customer</th>
                                         <th className='text-right p-2'>Total</th>
+                                        <th className='text-right p-2'>Profit</th>
                                         <th className='text-left p-2'>Payment</th>
                                         <th className='text-left p-2'>Status</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredBills.map(bill => (
-                                        <tr key={bill.id} className='border-b hover:bg-gray-50'>
+                                        <tr key={bill.id} className='border-b hover:bg-muted/50'>
                                             <td className='p-2 font-medium'>{bill.billNumber}</td>
                                             <td className='p-2'>{bill.billDate?.toDate().toLocaleDateString()}</td>
                                             <td className='p-2'>{bill.customerName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(bill.totalAmount)}</td>
+                                            <td className='p-2 text-right font-semibold text-green-600'>{formatCurrency(bill.totalProfit || 0)}</td>
                                             <td className='p-2 capitalize'>{bill.paymentMethod}</td>
                                             <td className='p-2'>
                                                 <span

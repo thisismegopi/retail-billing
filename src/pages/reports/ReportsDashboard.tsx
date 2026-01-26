@@ -1,7 +1,7 @@
 import type { Bill, Customer } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { collection, getDocs, query, where } from 'firebase/firestore';
-import { useEffect, useState, useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ interface CustomerReport {
     customerId: string | null;
     customerName: string;
     totalBillAmount: number;
+    totalProfit: number;
     outstandingAmount: number;
     billCount: number;
 }
@@ -21,6 +22,7 @@ interface CategoryReport {
     categoryId: string;
     categoryName: string;
     totalSales: number;
+    totalProfit: number;
     quantitySold: number;
 }
 
@@ -29,6 +31,7 @@ interface ProductReport {
     productName: string;
     sku: string;
     totalSales: number;
+    totalProfit: number;
     quantitySold: number;
     categoryName: string;
 }
@@ -47,6 +50,7 @@ export default function ReportsDashboard() {
 
     // Summary metrics
     const [totalSales, setTotalSales] = useState(0);
+    const [totalProfit, setTotalProfit] = useState(0);
     const [totalOutstanding, setTotalOutstanding] = useState(0);
     const [billCount, setBillCount] = useState(0);
     const [totalTax, setTotalTax] = useState(0);
@@ -64,10 +68,12 @@ export default function ReportsDashboard() {
     const calculateReports = useCallback((filteredBills: Bill[], customerList: Customer[]) => {
         // Calculate summary metrics
         const total = filteredBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
+        const profit = filteredBills.reduce((sum, bill) => sum + (bill.totalProfit || 0), 0);
         const tax = filteredBills.reduce((sum, bill) => sum + bill.taxAmount, 0);
         const outstanding = customerList.reduce((sum, customer) => sum + customer.outstandingBalance, 0);
 
         setTotalSales(total);
+        setTotalProfit(profit);
         setTotalTax(tax);
         setBillCount(filteredBills.length);
         setTotalOutstanding(outstanding);
@@ -81,11 +87,13 @@ export default function ReportsDashboard() {
                 customerId: bill.customerId || null,
                 customerName: bill.customerName,
                 totalBillAmount: 0,
+                totalProfit: 0,
                 outstandingAmount: 0,
                 billCount: 0,
             };
 
             existing.totalBillAmount += bill.totalAmount;
+            existing.totalProfit += bill.totalProfit || 0;
             existing.billCount += 1;
             customerMap.set(key, existing);
         });
@@ -110,10 +118,12 @@ export default function ReportsDashboard() {
                     categoryId: key,
                     categoryName: item.categoryName || 'Uncategorized',
                     totalSales: 0,
+                    totalProfit: 0,
                     quantitySold: 0,
                 };
 
                 existing.totalSales += item.totalAmount;
+                existing.totalProfit += item.totalProfit || 0;
                 existing.quantitySold += item.quantity;
                 categoryMap.set(key, existing);
             });
@@ -131,11 +141,13 @@ export default function ReportsDashboard() {
                     productName: item.productName,
                     sku: item.sku,
                     totalSales: 0,
+                    totalProfit: 0,
                     quantitySold: 0,
                     categoryName: item.categoryName || 'Uncategorized',
                 };
 
                 existing.totalSales += item.totalAmount;
+                existing.totalProfit += item.totalProfit || 0;
                 existing.quantitySold += item.quantity;
                 productMap.set(item.productId, existing);
             });
@@ -236,14 +248,24 @@ export default function ReportsDashboard() {
             </Card>
 
             {/* Summary Metrics */}
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4'>
                 <Card>
                     <CardHeader className='pb-2'>
                         <CardDescription>Total Sales</CardDescription>
                         <CardTitle className='text-3xl'>{formatCurrency(totalSales)}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className='text-xs text-gray-500'>{billCount} bills</p>
+                        <p className='text-xs text-muted-foreground'>{billCount} bills</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className='pb-2'>
+                        <CardDescription>Total Profit</CardDescription>
+                        <CardTitle className='text-3xl text-green-600'>{formatCurrency(totalProfit)}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className='text-xs text-muted-foreground'>{totalSales > 0 ? `${((totalProfit / totalSales) * 100).toFixed(1)}% margin` : '0% margin'}</p>
                     </CardContent>
                 </Card>
 
@@ -253,7 +275,7 @@ export default function ReportsDashboard() {
                         <CardTitle className='text-3xl'>{formatCurrency(totalTax)}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className='text-xs text-gray-500'>Tax collected</p>
+                        <p className='text-xs text-muted-foreground'>Tax collected</p>
                     </CardContent>
                 </Card>
 
@@ -263,7 +285,7 @@ export default function ReportsDashboard() {
                         <CardTitle className='text-3xl text-red-600'>{formatCurrency(totalOutstanding)}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className='text-xs text-gray-500'>Pending collections</p>
+                        <p className='text-xs text-muted-foreground'>Pending collections</p>
                     </CardContent>
                 </Card>
 
@@ -273,7 +295,7 @@ export default function ReportsDashboard() {
                         <CardTitle className='text-3xl'>{billCount}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <p className='text-xs text-gray-500'>In date range</p>
+                        <p className='text-xs text-muted-foreground'>In date range</p>
                     </CardContent>
                 </Card>
             </div>
@@ -294,6 +316,7 @@ export default function ReportsDashboard() {
                                     <tr className='border-b'>
                                         <th className='text-left p-2'>Customer</th>
                                         <th className='text-right p-2'>Bill Amount</th>
+                                        <th className='text-right p-2'>Profit</th>
                                         <th className='text-right p-2'>Outstanding</th>
                                         <th className='text-center p-2'>Bills</th>
                                     </tr>
@@ -303,6 +326,7 @@ export default function ReportsDashboard() {
                                         <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.customerName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(report.totalBillAmount)}</td>
+                                            <td className='p-2 text-right font-semibold text-green-600'>{formatCurrency(report.totalProfit)}</td>
                                             <td className='p-2 text-right text-red-600 font-semibold'>{formatCurrency(report.outstandingAmount)}</td>
                                             <td className='p-2 text-center'>{report.billCount}</td>
                                         </tr>
@@ -330,6 +354,7 @@ export default function ReportsDashboard() {
                                     <tr className='border-b'>
                                         <th className='text-left p-2'>Category</th>
                                         <th className='text-right p-2'>Total Sales</th>
+                                        <th className='text-right p-2'>Profit</th>
                                         <th className='text-right p-2'>Quantity Sold</th>
                                     </tr>
                                 </thead>
@@ -338,6 +363,7 @@ export default function ReportsDashboard() {
                                         <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.categoryName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(report.totalSales)}</td>
+                                            <td className='p-2 text-right font-semibold text-green-600'>{formatCurrency(report.totalProfit)}</td>
                                             <td className='p-2 text-right'>{report.quantitySold}</td>
                                         </tr>
                                     ))}
@@ -366,6 +392,7 @@ export default function ReportsDashboard() {
                                         <th className='text-left p-2'>SKU</th>
                                         <th className='text-left p-2'>Category</th>
                                         <th className='text-right p-2'>Total Sales</th>
+                                        <th className='text-right p-2'>Profit</th>
                                         <th className='text-right p-2'>Quantity Sold</th>
                                     </tr>
                                 </thead>
@@ -373,9 +400,10 @@ export default function ReportsDashboard() {
                                     {productReports.map((report, index) => (
                                         <tr key={index} className='border-b hover:bg-muted/50'>
                                             <td className='p-2'>{report.productName}</td>
-                                            <td className='p-2 text-sm text-gray-600'>{report.sku}</td>
+                                            <td className='p-2 text-sm text-muted-foreground'>{report.sku}</td>
                                             <td className='p-2 text-sm'>{report.categoryName}</td>
                                             <td className='p-2 text-right font-semibold'>{formatCurrency(report.totalSales)}</td>
+                                            <td className='p-2 text-right font-semibold text-green-600'>{formatCurrency(report.totalProfit)}</td>
                                             <td className='p-2 text-right'>{report.quantitySold}</td>
                                         </tr>
                                     ))}

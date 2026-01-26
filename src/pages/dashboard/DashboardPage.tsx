@@ -15,6 +15,7 @@ import { useAuth } from '@/hooks/useAuth';
 interface DashboardStats {
     todayBillsAmount: number;
     todayBillsCount: number;
+    todayProfit: number;
     totalCustomers: number;
     totalProducts: number;
 }
@@ -26,6 +27,7 @@ export default function DashboardPage() {
     const [stats, setStats] = useState<DashboardStats>({
         todayBillsAmount: 0,
         todayBillsCount: 0,
+        todayProfit: 0,
         totalCustomers: 0,
         totalProducts: 0,
     });
@@ -87,6 +89,7 @@ export default function DashboardPage() {
 
             const todayBillsAmount = todayBills.reduce((sum, bill) => sum + bill.totalAmount, 0);
             const todayBillsCount = todayBills.length;
+            const todayProfit = todayBills.reduce((sum, bill) => sum + (bill.totalProfit || 0), 0);
 
             // Fetch total customers
             const customersQuery = query(collection(db, 'customers'), where('shopId', '==', userData.shopId), where('isActive', '==', true));
@@ -108,6 +111,7 @@ export default function DashboardPage() {
             setStats({
                 todayBillsAmount,
                 todayBillsCount,
+                todayProfit,
                 totalCustomers,
                 totalProducts,
             });
@@ -249,7 +253,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Statistics Cards */}
-            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-4'>
+            <div className='grid gap-4 md:grid-cols-2 lg:grid-cols-5'>
                 <Card>
                     <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
                         <CardTitle className='text-sm font-medium'>Today's Revenue</CardTitle>
@@ -258,6 +262,17 @@ export default function DashboardPage() {
                     <CardContent>
                         <div className='text-2xl font-bold'>{formatCurrency(stats.todayBillsAmount)}</div>
                         <p className='text-xs text-muted-foreground'>From {stats.todayBillsCount} bills</p>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
+                        <CardTitle className='text-sm font-medium'>Today's Profit</CardTitle>
+                        <DollarSign className='h-4 w-4 text-green-600' />
+                    </CardHeader>
+                    <CardContent>
+                        <div className='text-2xl font-bold text-green-600'>{formatCurrency(stats.todayProfit)}</div>
+                        <p className='text-xs text-muted-foreground'>{stats.todayBillsAmount > 0 ? `${((stats.todayProfit / stats.todayBillsAmount) * 100).toFixed(1)}% margin` : '0% margin'}</p>
                     </CardContent>
                 </Card>
 
@@ -318,6 +333,7 @@ export default function DashboardPage() {
                                     <th className='text-left py-3 px-4 font-medium text-sm'>Customer</th>
                                     <th className='text-left py-3 px-4 font-medium text-sm'>Date</th>
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Amount</th>
+                                    <th className='text-right py-3 px-4 font-medium text-sm'>Profit</th>
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Balance</th>
                                     <th className='text-center py-3 px-4 font-medium text-sm'>Status</th>
                                     <th className='text-center py-3 px-4 font-medium text-sm'>Invoice</th>
@@ -326,7 +342,7 @@ export default function DashboardPage() {
                             <tbody>
                                 {currentBills.length === 0 ? (
                                     <tr>
-                                        <td colSpan={7} className='text-center py-8 text-muted-foreground'>
+                                        <td colSpan={8} className='text-center py-8 text-muted-foreground'>
                                             {searchTerm ? 'No bills found matching your search' : 'No bills found'}
                                         </td>
                                     </tr>
@@ -337,6 +353,7 @@ export default function DashboardPage() {
                                             <td className='py-3 px-4'>{bill.customerName}</td>
                                             <td className='py-3 px-4 text-sm text-muted-foreground'>{formatDate(bill.createdAt)}</td>
                                             <td className='py-3 px-4 text-right font-medium'>{formatCurrency(bill.totalAmount)}</td>
+                                            <td className='py-3 px-4 text-right font-medium text-green-600'>{formatCurrency(bill.totalProfit || 0)}</td>
                                             <td className='py-3 px-4 text-right font-medium'>{formatCurrency(bill.balanceAmount)}</td>
                                             <td className='py-3 px-4 text-center'>{getStatusBadge(bill)}</td>
                                             <td className='py-3 px-4 text-center'>
