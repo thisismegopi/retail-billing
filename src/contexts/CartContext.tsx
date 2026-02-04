@@ -37,13 +37,14 @@ export const CartProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 const existing = prev.find(item => item.productId === product.id);
                 if (existing) {
                     const newQuantity = existing.quantity + quantity;
+                    const profitPerItem = existing.sellingPrice - existing.costPrice;
                     return prev.map(item =>
                         item.productId === product.id
                             ? {
                                   ...item,
                                   quantity: newQuantity,
                                   totalAmount: Math.round(newQuantity * item.sellingPrice * 100) / 100,
-                                  totalProfit: Math.round((item.sellingPrice - item.costPrice) * newQuantity * 100) / 100,
+                                  totalProfit: Math.round(profitPerItem * newQuantity * 100) / 100,
                               }
                             : item,
                     );
