@@ -1,6 +1,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, FileText, Package, Search, Users, XCircle } from 'lucide-react';
-import { DocumentSnapshot, Timestamp, collection, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
+import { CheckCircle, ChevronLeft, ChevronRight, Clock, DollarSign, FileText, Package, Search, Trash2, Users, XCircle } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { DocumentSnapshot, Timestamp, collection, deleteDoc, doc, getDocs, limit, orderBy, query, startAfter, where } from 'firebase/firestore';
 import { useEffect, useState } from 'react';
 
 import type { Bill } from '@/lib/types';
@@ -10,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { db } from '@/lib/firebase';
 import { formatCurrency } from '@/lib/utils';
 import invoiceIcon from '@/assets/icons/pdf.png';
+import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 
 interface DashboardStats {
@@ -38,6 +40,9 @@ export default function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [lastDoc, setLastDoc] = useState<DocumentSnapshot | null>(null);
     const [hasMore, setHasMore] = useState(true);
+    const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+    const [billToDelete, setBillToDelete] = useState<Bill | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     useEffect(() => {
         if (userData?.shopId) {
@@ -175,6 +180,46 @@ export default function DashboardPage() {
             console.log('Bills fetched:', fetchedBills.length);
         } catch (error) {
             console.error('Error fetching bills:', error);
+        }
+    };
+
+    const handleDeleteBill = async () => {
+        if (!billToDelete || !userData?.shopId) return;
+
+        try {
+            setIsDeleting(true);
+            await deleteDoc(doc(db, 'bills', billToDelete.id!));
+
+            // Update local state
+            setBills(prev => prev.filter(b => b.id !== billToDelete.id));
+
+            // Check if it was a today's bill and update stats
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const billDate = billToDelete.createdAt.toDate();
+            billDate.setHours(0, 0, 0, 0);
+
+            if (billDate.getTime() === today.getTime()) {
+                setStats(prev => ({
+                    ...prev,
+                    todayBillsAmount: prev.todayBillsAmount - billToDelete.totalAmount,
+                    todayBillsCount: prev.todayBillsCount - 1,
+                    todayProfit: prev.todayProfit - (billToDelete.totalProfit || 0),
+                }));
+            }
+
+            toast.success('Bill Deleted', {
+                description: `Bill ${billToDelete.billNumber} has been successfully deleted.`,
+            });
+            setIsDeleteDialogOpen(false);
+            setBillToDelete(null);
+        } catch (error) {
+            console.error('Error deleting bill:', error);
+            toast.error('Error', {
+                description: 'Failed to delete the bill. Please try again.',
+            });
+        } finally {
+            setIsDeleting(false);
         }
     };
 
@@ -336,7 +381,7 @@ export default function DashboardPage() {
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Profit</th>
                                     <th className='text-right py-3 px-4 font-medium text-sm'>Balance</th>
                                     <th className='text-center py-3 px-4 font-medium text-sm'>Status</th>
-                                    <th className='text-center py-3 px-4 font-medium text-sm'>Invoice</th>
+                                    <th className='text-center py-3 px-4 font-medium text-sm'>Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -357,9 +402,23 @@ export default function DashboardPage() {
                                             <td className='py-3 px-4 text-right font-medium'>{formatCurrency(bill.balanceAmount)}</td>
                                             <td className='py-3 px-4 text-center'>{getStatusBadge(bill)}</td>
                                             <td className='py-3 px-4 text-center'>
-                                                <Link to={`/invoice/${bill.id}`} title='View Invoice'>
-                                                    <img src={invoiceIcon} alt='Invoice' className='w-6 h-6' />
-                                                </Link>
+                                                <div className='flex items-center justify-center gap-2'>
+                                                    <Link to={`/invoice/${bill.id}`} title='View Invoice' className='p-1 hover:bg-muted rounded-md transition-colors'>
+                                                        <img src={invoiceIcon} alt='Invoice' className='w-5 h-5' />
+                                                    </Link>
+                                                    <Button
+                                                        variant='ghost'
+                                                        size='icon'
+                                                        className='h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50'
+                                                        onClick={() => {
+                                                            setBillToDelete(bill);
+                                                            setIsDeleteDialogOpen(true);
+                                                        }}
+                                                        title='Delete Bill'
+                                                    >
+                                                        <Trash2 className='w-4 h-4' />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -391,6 +450,26 @@ export default function DashboardPage() {
                     )}
                 </CardContent>
             </Card>
+
+            {/* Delete Confirmation Dialog */}
+            <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Delete Bill</DialogTitle>
+                        <DialogDescription>
+                            Are you sure you want to delete bill <span className='font-bold'>{billToDelete?.billNumber}</span>? This action cannot be undone.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter className='gap-2 sm:gap-0 mt-4'>
+                        <Button variant='outline' onClick={() => setIsDeleteDialogOpen(false)} disabled={isDeleting}>
+                            Cancel
+                        </Button>
+                        <Button variant='destructive' onClick={handleDeleteBill} disabled={isDeleting}>
+                            {isDeleting ? 'Deleting...' : 'Proceed'}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
