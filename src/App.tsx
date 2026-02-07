@@ -1,4 +1,4 @@
-import { HashRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
 
 import AuthLayout from '@/layouts/AuthLayout';
 import { AuthProvider } from '@/contexts/AuthContext';
@@ -29,7 +29,7 @@ function App() {
     return (
         <AuthProvider>
             <CartProvider>
-                <HashRouter>
+                <BrowserRouter>
                     <Routes>
                         {/* Public Routes */}
                         <Route path='/auth' element={<AuthLayout />}>
@@ -56,7 +56,7 @@ function App() {
                         {/* Fallback */}
                         <Route path='*' element={<Navigate to='/auth/login' replace />} />
                     </Routes>
-                </HashRouter>
+                </BrowserRouter>
                 <Toaster />
             </CartProvider>
         </AuthProvider>
